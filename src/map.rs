@@ -148,6 +148,12 @@ impl BaseMap for Map {
         if self.is_exit_valid(x, y-1) { exits.push((idx-self.width, 1.0)); }
         if self.is_exit_valid(x, y+1) { exits.push((idx+self.width, 1.0)); }
 
+        // Diagonals
+        if self.is_exit_valid(x-1, y-1) { exits.push((idx-self.width-1, 1.45)); }
+        if self.is_exit_valid(x+1, y-1) { exits.push((idx-self.width+1, 1.45)); }
+        if self.is_exit_valid(x-1, y+1) { exits.push((idx+self.width-1, 1.45)); }
+        if self.is_exit_valid(x+1, y+1) { exits.push((idx+self.width+1, 1.45)); }
+
         exits
     }
 
