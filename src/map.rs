@@ -1,4 +1,3 @@
-use super::components::{Player, Viewshed};
 use super::rect::Rect;
 use rltk::{Algorithm2D, BaseMap, Console, Point, RandomNumberGenerator, Rltk, RGB};
 use specs::prelude::*;

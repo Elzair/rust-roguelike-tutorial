@@ -28,7 +28,7 @@ impl<'a> System<'a> for VisibilitySystem {
                 // If this is the player, reveal what they can see
                 // TODO: Fix this for real. I do not think this is a good ECS pattern. 
                 let p: Option<&Player> = player.get(ent);
-                if let Some(p) = p {
+                if let Some(_p) = p {
                     for t in map.visible_tiles.iter_mut() { *t = false; }
                     for vis in viewshed.visible_tiles.iter() {
                         let idx = map.xy_idx(vis.x, vis.y);
