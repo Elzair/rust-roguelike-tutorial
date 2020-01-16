@@ -1,6 +1,6 @@
 use super::components::{Monster, Name, Position, Viewshed};
 use super::map::Map;
-use rltk::{console, field_of_view, Point};
+use rltk::{console, Point};
 use specs::prelude::*;
 
 pub struct MonsterAI {}

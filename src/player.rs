@@ -2,7 +2,7 @@ use specs::prelude::*;
 use rltk::{Point, Rltk, VirtualKeyCode};
 use super::{RunState, State};
 use super::components::{Player, Position, Viewshed};
-use super::map::{TileType, Map};
+use super::map::Map;
 use std::cmp::{min, max};
 
 pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
