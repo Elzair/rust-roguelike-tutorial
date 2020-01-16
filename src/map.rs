@@ -1,5 +1,5 @@
 use super::rect::Rect;
-use rltk::{Console, RandomNumberGenerator, Rltk, RGB};
+use rltk::{Algorithm2D, BaseMap, Console, Point, RandomNumberGenerator, Rltk, RGB};
 use std::cmp::{max, min};
 
 #[derive(PartialEq, Copy, Clone)]
@@ -93,6 +93,36 @@ impl Map {
         }
 
         map
+    }
+}
+
+impl Algorithm2D for Map {
+    fn in_bounds(&self, pos : Point) -> bool {
+        pos.x > 0 && pos.x < self.width-1 && pos.y > 0 && pos.y < self.height-1
+    }
+
+    fn point2d_to_index(&self, pt: Point) -> i32 {
+        (pt.y * self.width) + pt.x
+    }
+
+    fn index_to_point2d(&self, idx:i32) -> Point {
+        Point{ x: idx % self.width, y: idx / self.width }
+    }
+}
+
+impl BaseMap for Map {
+    fn is_opaque(&self, idx:i32) -> bool {
+        self.tiles[idx as usize] == TileType::Wall
+    }
+
+    fn get_available_exits(&self, _idx:i32) -> Vec<(i32, f32)> {
+        Vec::new()
+    }
+
+    fn get_pathing_distance(&self, idx1:i32, idx2:i32) -> f32 {
+        let p1 = Point::new(idx1 % self.width, idx1 / self.width);
+        let p2 = Point::new(idx2 % self.width, idx2 / self.width);
+        rltk::DistanceAlg::Pythagoras.distance2d(p1, p2)
     }
 }
 
