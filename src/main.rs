@@ -5,9 +5,11 @@ use specs::prelude::*;
 extern crate specs_derive;
 
 mod components;
-pub use components::{Monster, Name, Player, Position, Renderable, Viewshed};
+pub use components::{BlocksTile, Monster, Name, Player, Position, Renderable, Viewshed};
 mod map;
 pub use map::*;
+mod map_indexing_system;
+pub use map_indexing_system::MapIndexingSystem;
 mod monster_ai_system;
 pub use monster_ai_system::MonsterAI;
 mod player;
@@ -31,6 +33,8 @@ impl State {
         vis.run_now(&self.ecs);
         let mut mob = MonsterAI{};
         mob.run_now(&self.ecs);
+        let mut mapindex = MapIndexingSystem{};
+        mapindex.run_now(&self.ecs);
         self.ecs.maintain();
     }
 }
@@ -73,6 +77,7 @@ fn main() {
     gs.ecs.register::<Viewshed>();
     gs.ecs.register::<Monster>();
     gs.ecs.register::<Name>();
+    gs.ecs.register::<BlocksTile>();
 
     let map = Map::new_map_rooms_and_corridors();
     let (player_x, player_y) = map.rooms[0].center();
@@ -98,6 +103,7 @@ fn main() {
             .with(Viewshed{ visible_tiles: Vec::new(), range: 8, dirty: true })
             .with(Monster{})
             .with(Name{ name: format!("{} #{}", &name, i) })
+            .with(BlocksTile{})
             .build();
     }
 
