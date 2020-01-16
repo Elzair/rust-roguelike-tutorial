@@ -5,9 +5,11 @@ use specs::prelude::*;
 extern crate specs_derive;
 
 mod components;
-pub use components::*;
+pub use components::{Monster, Player, Position, Renderable, Viewshed};
 mod map;
 pub use map::*;
+mod monster_ai_system;
+pub use monster_ai_system::MonsterAI;
 mod player;
 pub use player::*;
 mod rect;
@@ -23,6 +25,8 @@ impl State {
     fn run_systems(&mut self) {
         let mut vis = VisibilitySystem{};
         vis.run_now(&self.ecs);
+        let mut mob = MonsterAI{};
+        mob.run_now(&self.ecs);
         self.ecs.maintain();
     }
 }
@@ -56,6 +60,7 @@ fn main() {
     gs.ecs.register::<Renderable>();
     gs.ecs.register::<Player>();
     gs.ecs.register::<Viewshed>();
+    gs.ecs.register::<Monster>();
 
     let map = Map::new_map_rooms_and_corridors();
     let (player_x, player_y) = map.rooms[0].center();
@@ -78,6 +83,7 @@ fn main() {
                 bg: RGB::named(rltk::BLACK),
             })
             .with(Viewshed{ visible_tiles: Vec::new(), range: 8, dirty: true })
+            .with(Monster{})
             .build();
     }
 
