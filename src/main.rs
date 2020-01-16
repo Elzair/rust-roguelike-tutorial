@@ -17,8 +17,12 @@ pub use rect::*;
 mod visibility_system;
 pub use visibility_system::VisibilitySystem;
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum RunState { Paused, Running }
+
 pub struct State {
-    ecs: World,
+    pub ecs: World,
+    pub runstate: RunState,
 }
 
 impl State {
@@ -35,8 +39,12 @@ impl GameState for State {
     fn tick(&mut self, ctx: &mut Rltk) {
         ctx.cls();
 
-        player_input(self, ctx);
-        self.run_systems();
+        if self.runstate == RunState::Running {
+            self.run_systems();
+            self.runstate = RunState::Paused;
+        } else {
+            self.runstate = player_input(self, ctx);
+        }
 
         draw_map(&self.ecs, ctx);
 
@@ -55,7 +63,10 @@ impl GameState for State {
 
 fn main() {
     let context = Rltk::init_simple8x8(80, 50, "Hello Rust World", "resources");
-    let mut gs = State { ecs: World::new() };
+    let mut gs = State { 
+        ecs: World::new(),
+        runstate: RunState::Running,
+    };
     gs.ecs.register::<Position>();
     gs.ecs.register::<Renderable>();
     gs.ecs.register::<Player>();
