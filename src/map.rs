@@ -23,6 +23,12 @@ impl Map {
         (y as usize * self.width as usize) + x as usize
     }
 
+    fn is_exit_valid(&self, x: i32, y: i32) -> bool {
+        if x < 1 || x > self.width-1 || y < 1 || y > self.height-1 { return false; }
+        let idx = self.xy_idx(x, y);
+        self.tiles[idx as usize] != TileType::Wall
+    }
+
     fn apply_room_to_map(&mut self, room: &Rect) {
         for y in room.y1 + 1..=room.y2 {
             for x in room.x1 + 1..=room.x2 {
@@ -123,8 +129,18 @@ impl BaseMap for Map {
         self.tiles[idx as usize] == TileType::Wall
     }
 
-    fn get_available_exits(&self, _idx: i32) -> Vec<(i32, f32)> {
-        Vec::new()
+    fn get_available_exits(&self, idx: i32) -> Vec<(i32, f32)> {
+        let mut exits: Vec<(i32, f32)> = Vec::new();
+        let x = idx % self.width;
+        let y = idx / self.width;
+
+        // Cardinal directions
+        if self.is_exit_valid(x-1, y) { exits.push((idx-1, 1.0)); }
+        if self.is_exit_valid(x+1, y) { exits.push((idx+1, 1.0)); }
+        if self.is_exit_valid(x, y-1) { exits.push((idx-self.width, 1.0)); }
+        if self.is_exit_valid(x, y+1) { exits.push((idx+self.width, 1.0)); }
+
+        exits
     }
 
     fn get_pathing_distance(&self, idx1: i32, idx2: i32) -> f32 {
