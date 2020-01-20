@@ -1,7 +1,7 @@
 use specs::prelude::*;
-use rltk::{Point, Rltk, VirtualKeyCode};
+use rltk::{console, Point, Rltk, VirtualKeyCode};
 use super::{RunState, State};
-use super::components::{Player, Position, Viewshed};
+use super::components::{CombatStats, Player, Position, Viewshed};
 use super::map::Map;
 use std::cmp::{min, max};
 
@@ -9,11 +9,27 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
     let mut positions = ecs.write_storage::<Position>();
     let mut players = ecs.write_storage::<Player>();
     let mut viewsheds = ecs.write_storage::<Viewshed>();
+    let combat_stats = ecs.read_storage::<CombatStats>();
     let map = ecs.fetch::<Map>();
 
     for (_player, pos, viewshed) in (&mut players, &mut positions, &mut viewsheds).join() {
         let destination_idx = map.xy_idx(pos.x + delta_x, pos.y + delta_y);
-        if !map.blocked[destination_idx] {
+        let mut attacked = false;
+
+        for potential_target in map.tile_content[destination_idx].iter() {
+            let target = combat_stats.get(*potential_target);
+            match target {
+                None => {},
+                Some(_) => {
+                    // Attack it 
+                    console::log(&format!("From Hell's Heart, I stab thee!"));
+                    attacked = true;
+                    // break; // TODO: See if this break is necessary or not
+                }
+            }
+        }
+
+        if !attacked && !map.blocked[destination_idx] {
             pos.x = min(map.width-1, max(0, pos.x + delta_x));
             pos.y = min(map.height-1, max(0, pos.y + delta_y));
 

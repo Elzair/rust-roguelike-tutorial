@@ -5,7 +5,7 @@ use specs::prelude::*;
 extern crate specs_derive;
 
 mod components;
-pub use components::{BlocksTile, Monster, Name, Player, Position, Renderable, Viewshed};
+pub use components::{BlocksTile, CombatStats, Monster, Name, Player, Position, Renderable, Viewshed};
 mod map;
 pub use map::*;
 mod map_indexing_system;
@@ -78,6 +78,7 @@ fn main() {
     gs.ecs.register::<Monster>();
     gs.ecs.register::<Name>();
     gs.ecs.register::<BlocksTile>();
+    gs.ecs.register::<CombatStats>();
 
     let map = Map::new_map_rooms_and_corridors();
     let (player_x, player_y) = map.rooms[0].center();
@@ -104,6 +105,7 @@ fn main() {
             .with(Monster{})
             .with(Name{ name: format!("{} #{}", &name, i) })
             .with(BlocksTile{})
+            .with(CombatStats{ max_hp: 16, hp: 16, defense: 1, power: 4 })
             .build();
     }
 
@@ -120,6 +122,7 @@ fn main() {
         .with(Player {})
         .with(Viewshed{ visible_tiles: Vec::new(), range: 8, dirty: true })
         .with(Name{name: "Player".to_string() })
+        .with(CombatStats{ max_hp: 30, hp: 30, defense: 2, power: 5 })
         .build();
 
     rltk::main_loop(context, gs);
