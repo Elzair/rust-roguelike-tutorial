@@ -6,11 +6,13 @@ use specs::prelude::*;
 extern crate specs_derive;
 
 mod components;
-pub use components::{BlocksTile, CombatStats, Monster, Item, Name, Player, Position, Potion, Renderable, SufferDamage, Viewshed, WantsToMelee};
+pub use components::{BlocksTile, CombatStats, Item, InBackpack, Monster, Name, Player, Position, Potion, Renderable, SufferDamage, Viewshed, WantsToPickupItem, WantsToMelee};
 mod damage_system;
 pub use damage_system::DamageSystem;
 mod gamelog;
 mod gui;
+mod inventory_system;
+pub use inventory_system::ItemCollectionSystem;
 mod map;
 pub use map::*;
 mod map_indexing_system;
@@ -46,6 +48,8 @@ impl State {
         melee.run_now(&self.ecs);
         let mut damage = DamageSystem{};
         damage.run_now(&self.ecs);
+        let mut pickup = ItemCollectionSystem{};
+        pickup.run_now(&self.ecs);
         self.ecs.maintain();
     }
 }
@@ -119,6 +123,8 @@ fn main() {
     gs.ecs.register::<SufferDamage>();
     gs.ecs.register::<Item>();
     gs.ecs.register::<Potion>();
+    gs.ecs.register::<InBackpack>();
+    gs.ecs.register::<WantsToPickupItem>();
 
     let map = Map::new_map_rooms_and_corridors();
     let (player_x, player_y) = map.rooms[0].center();
