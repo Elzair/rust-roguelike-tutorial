@@ -1,4 +1,4 @@
-use super::components::{BlocksTile, CombatStats, Item, Monster, Name, Player, Position, Potion, Renderable, Viewshed};
+use super::components::{BlocksTile, CombatStats, Consumable, Item, Monster, Name, Player, Position, ProvidesHealing, Renderable, Viewshed};
 use super::map::{MAPWIDTH};
 use super::rect::Rect;
 use rltk::{RandomNumberGenerator, RGB};
@@ -99,7 +99,8 @@ fn health_potion(ecs: &mut World, x: i32, y: i32) {
         })
         .with(Name{ name: "Health Potion".to_string() })
         .with(Item{})
-        .with(Potion{ heal_amount: 8 })
+        .with(Consumable{})
+        .with(ProvidesHealing{ heal_amount: 8 })
         .build();
 }
 
