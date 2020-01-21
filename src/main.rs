@@ -9,6 +9,8 @@ mod components;
 pub use components::{BlocksTile, CombatStats, Monster, Name, Player, Position, Renderable, SufferDamage, Viewshed, WantsToMelee};
 mod damage_system;
 pub use damage_system::DamageSystem;
+mod gamelog;
+mod gui;
 mod map;
 pub use map::*;
 mod map_indexing_system;
@@ -93,6 +95,8 @@ impl GameState for State {
                 ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
             }
         }
+
+        gui::draw_ui(&self.ecs, ctx);
     }
 }
 
@@ -116,6 +120,7 @@ fn main() {
     let (player_x, player_y) = map.rooms[0].center();
     gs.ecs.insert(Point::new(player_x, player_y));
     gs.ecs.insert(RunState::PreRun);
+    // gs.ecs.insert(gamelog::GameLog{ entries: vec!["Welcome to Rusty Roguelike".to_string()] });
     
     // Populate rooms with monsters
     let mut rng = rltk::RandomNumberGenerator::new();
