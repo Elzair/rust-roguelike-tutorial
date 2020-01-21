@@ -1,15 +1,20 @@
 rltk::add_wasm_support!();
 use rltk::{Console, GameState, Point, Rltk, RGB};
+extern crate specs;
 use specs::prelude::*;
 #[macro_use]
 extern crate specs_derive;
 
 mod components;
-pub use components::{BlocksTile, CombatStats, Monster, Name, Player, Position, Renderable, Viewshed};
+pub use components::{BlocksTile, CombatStats, Monster, Name, Player, Position, Renderable, SufferDamage, Viewshed, WantsToMelee};
+mod damage_system;
+pub use damage_system::{DamageSystem, delete_the_dead};
 mod map;
 pub use map::*;
 mod map_indexing_system;
 pub use map_indexing_system::MapIndexingSystem;
+mod melee_combat_system;
+pub use melee_combat_system::MeleeCombatSystem;
 mod monster_ai_system;
 pub use monster_ai_system::MonsterAI;
 mod player;
@@ -35,6 +40,10 @@ impl State {
         mob.run_now(&self.ecs);
         let mut mapindex = MapIndexingSystem{};
         mapindex.run_now(&self.ecs);
+        let mut melee = MeleeCombatSystem{};
+        melee.run_now(&self.ecs);
+        let mut damage = DamageSystem{};
+        damage.run_now(&self.ecs);
         self.ecs.maintain();
     }
 }
@@ -45,6 +54,7 @@ impl GameState for State {
 
         if self.runstate == RunState::Running {
             self.run_systems();
+            delete_the_dead(&mut self.ecs);
             self.runstate = RunState::Paused;
         } else {
             self.runstate = player_input(self, ctx);
@@ -57,7 +67,7 @@ impl GameState for State {
         let map = self.ecs.fetch::<Map>();
 
         for (pos, render) in (&positions, &renderables).join() {
-            let idx = map.xy_idx(pos.x, pos.y);
+            let idx = map.xy_idx(pos.x, pos.y).unwrap();
             if map.visible_tiles[idx] {
                 ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
             }
@@ -79,6 +89,8 @@ fn main() {
     gs.ecs.register::<Name>();
     gs.ecs.register::<BlocksTile>();
     gs.ecs.register::<CombatStats>();
+    gs.ecs.register::<WantsToMelee>();
+    gs.ecs.register::<SufferDamage>();
 
     let map = Map::new_map_rooms_and_corridors();
     let (player_x, player_y) = map.rooms[0].center();

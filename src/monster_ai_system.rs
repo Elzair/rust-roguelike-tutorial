@@ -29,8 +29,8 @@ impl<'a> System<'a> for MonsterAI {
                 }
 
                 let path = rltk::a_star_search(
-                    map.xy_idx(pos.x, pos.y) as i32, 
-                    map.xy_idx(player_pos.x, player_pos.y) as i32, 
+                    map.xy_idx(pos.x, pos.y).unwrap() as i32, 
+                    map.xy_idx(player_pos.x, player_pos.y).unwrap() as i32, 
                     &mut *map
                 );
                 if path.success && path.steps.len()>1 {

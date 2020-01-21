@@ -21,14 +21,14 @@ pub struct Map {
 }
 
 impl Map {
-    pub fn xy_idx(&self, x: i32, y: i32) -> usize {
-        (y as usize * self.width as usize) + x as usize
+    pub fn xy_idx(&self, x: i32, y: i32) -> Option<usize> {
+        if x < 0 || x > self.width-1 || y < 0 || y >= self.height-1 { None }
+        else { Some((y as usize * self.width as usize) + x as usize) }
     }
 
     fn is_exit_valid(&self, x: i32, y: i32) -> bool {
-        if x < 1 || x > self.width-1 || y < 1 || y > self.height-1 { return false; }
-        let idx = self.xy_idx(x, y);
-        !self.blocked[idx]
+        if let Some(idx) = self.xy_idx(x, y) { !self.blocked[idx] } 
+        else { false }
     }
 
     pub fn populate_blocked(&mut self) {
@@ -46,16 +46,16 @@ impl Map {
     fn apply_room_to_map(&mut self, room: &Rect) {
         for y in room.y1 + 1..=room.y2 {
             for x in room.x1 + 1..=room.x2 {
-                let idx = self.xy_idx(x, y);
-                self.tiles[idx] = TileType::Floor;
+                if let Some(idx) = self.xy_idx(x, y) {
+                    self.tiles[idx] = TileType::Floor;
+                }
             }
         }
     }
 
     fn apply_horizontal_tunnel(&mut self, x1: i32, x2: i32, y: i32) {
         for x in min(x1, x2)..=max(x1, x2) {
-            let idx = self.xy_idx(x, y);
-            if idx > 0 && idx < self.width as usize * self.height as usize {
+            if let Some(idx) = self.xy_idx(x, y) {
                 self.tiles[idx as usize] = TileType::Floor;
             }
         }
@@ -63,8 +63,7 @@ impl Map {
 
     fn apply_vertical_tunnel(&mut self, y1: i32, y2: i32, x: i32) {
         for y in min(y1, y2)..=max(y1, y2) {
-            let idx = self.xy_idx(x, y);
-            if idx > 0 && idx < self.width as usize * self.height as usize {
+            if let Some(idx) = self.xy_idx(x, y) {
                 self.tiles[idx as usize] = TileType::Floor;
             }
         }
