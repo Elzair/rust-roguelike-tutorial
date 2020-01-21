@@ -6,7 +6,7 @@ use specs::prelude::*;
 extern crate specs_derive;
 
 mod components;
-pub use components::{BlocksTile, CombatStats, Consumable, Item, InBackpack, Monster, Name, Player, Position, ProvidesHealing, Renderable, SufferDamage, Viewshed, WantsToDropItem, WantsToPickupItem, WantsToUseItem, WantsToMelee};
+pub use components::{BlocksTile, CombatStats, Consumable, Item, InBackpack, InflictsDamage, Monster, Name, Player, Position, ProvidesHealing, Ranged, Renderable, SufferDamage, Viewshed, WantsToDropItem, WantsToPickupItem, WantsToUseItem, WantsToMelee};
 mod damage_system;
 pub use damage_system::DamageSystem;
 mod gamelog;
@@ -166,6 +166,8 @@ fn main() {
     gs.ecs.register::<WantsToUseItem>();
     gs.ecs.register::<WantsToDropItem>();
     gs.ecs.register::<Consumable>();
+    gs.ecs.register::<InflictsDamage>();
+    gs.ecs.register::<Ranged>();
 
     let map = Map::new_map_rooms_and_corridors();
     let (player_x, player_y) = map.rooms[0].center();

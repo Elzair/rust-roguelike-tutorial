@@ -1,4 +1,4 @@
-use super::components::{BlocksTile, CombatStats, Consumable, Item, Monster, Name, Player, Position, ProvidesHealing, Renderable, Viewshed};
+use super::components::{BlocksTile, CombatStats, Consumable, InflictsDamage, Item, Monster, Name, Player, Position, ProvidesHealing, Ranged, Renderable, Viewshed};
 use super::map::{MAPWIDTH};
 use super::rect::Rect;
 use rltk::{RandomNumberGenerator, RGB};
@@ -72,7 +72,7 @@ pub fn spawn_room(ecs: &mut World, room: &Rect) {
     for idx in item_spawn_points.iter() {
         let x = *idx % MAPWIDTH;
         let y = *idx / MAPWIDTH;
-        health_potion(ecs, x as i32, y as i32);
+        random_item(ecs, x as i32, y as i32);
     }
 }
 
@@ -86,22 +86,6 @@ pub fn random_monster(ecs: &mut World, x: i32, y: i32) {
         1 => { orc(ecs, x, y) }
         _ => { goblin(ecs, x, y) }
     }
-}
-
-fn health_potion(ecs: &mut World, x: i32, y: i32) {
-    ecs.create_entity()
-        .with(Position{ x, y })
-        .with(Renderable{
-            glyph: rltk::to_cp437('¡'),
-            fg: RGB::named(rltk::MAGENTA),
-            bg: RGB::named(rltk::BLACK),
-            render_order: 2,
-        })
-        .with(Name{ name: "Health Potion".to_string() })
-        .with(Item{})
-        .with(Consumable{})
-        .with(ProvidesHealing{ heal_amount: 8 })
-        .build();
 }
 
 fn orc(ecs: &mut World, x: i32, y: i32) {
@@ -126,4 +110,48 @@ fn monster<S: ToString>(ecs: &mut World, x: i32, y: i32, glyph: u8, name: S) {
             .with(BlocksTile{})
             .with(CombatStats{ max_hp: 16, hp: 16, defense: 1, power: 4 })
             .build();
+}
+
+fn random_item(ecs: &mut World, x: i32, y: i32) {
+    let roll = {
+        let mut rng = ecs.write_resource::<RandomNumberGenerator>();
+        rng.roll_dice(1, 2)
+    };
+    match roll {
+        1 => { health_potion(ecs, x, y) }
+        _ => { magic_missile_scroll(ecs, x, y) }
+    }
+}
+
+fn health_potion(ecs: &mut World, x: i32, y: i32) {
+    ecs.create_entity()
+        .with(Position{ x, y })
+        .with(Renderable{
+            glyph: rltk::to_cp437('¡'),
+            fg: RGB::named(rltk::MAGENTA),
+            bg: RGB::named(rltk::BLACK),
+            render_order: 2,
+        })
+        .with(Name{ name: "Health Potion".to_string() })
+        .with(Item{})
+        .with(Consumable{})
+        .with(ProvidesHealing{ heal_amount: 8 })
+        .build();
+}
+
+fn magic_missile_scroll(ecs: &mut World, x: i32, y: i32) {
+    ecs.create_entity()
+        .with(Position{ x, y })
+        .with(Renderable{
+            glyph: rltk::to_cp437(')'),
+            fg: RGB::named(rltk::CYAN),
+            bg: RGB::named(rltk::BLACK),
+            render_order: 2
+        })
+        .with(Name{ name: "Magic Missile Scroll".to_string() })
+        .with(Item {})
+        .with(Consumable{})
+        .with(Ranged{ range: 6 })
+        .with(InflictsDamage{ damage: 8 })
+        .build();
 }
