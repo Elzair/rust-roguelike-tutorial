@@ -14,12 +14,12 @@ pub fn draw_ui(ecs: &World, ctx: &mut Rltk) {
 
         ctx.draw_bar_horizontal(23, 43, 51, stats.hp, stats.max_hp, RGB::named(rltk::RED), RGB::named(rltk::BLACK));
 
-        // let log = ecs.fetch::<GameLog>();
+        let log = ecs.fetch::<GameLog>();
 
-        // let mut y = 44;
-        // for s in log.entries.iter() {
-        //     if y < 49 { ctx.print(2, y, &s.to_string()); }
-        //     y += 1;
-        // }
+        let mut y = 44;
+        for s in log.entries.iter() {
+            if y < 49 { ctx.print(2, y, &s.to_string()); }
+            y += 1;
+        }
     }
 }
