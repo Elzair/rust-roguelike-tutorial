@@ -12,7 +12,7 @@ pub fn draw_ui(ecs: &World, ctx: &mut Rltk) {
         let health = format!(" HP: {} / {}", stats.hp, stats.max_hp);
         ctx.print_color(12, 43, RGB::named(rltk::YELLOW), RGB::named(rltk::BLACK), &health);
 
-        ctx.draw_bar_horizontal(23, 43, 51, stats.hp, stats.max_hp, RGB::named(rltk::RED), RGB::named(rltk::BLACK));
+        ctx.draw_bar_horizontal(28, 43, 51, stats.hp, stats.max_hp, RGB::named(rltk::RED), RGB::named(rltk::BLACK));
 
         let log = ecs.fetch::<GameLog>();
 
