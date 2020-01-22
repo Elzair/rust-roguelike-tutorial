@@ -1,5 +1,5 @@
 use super::components::{
-    AreaOfEffect, CombatStats, Consumable, InBackpack, InflictsDamage, Name, Position,
+    AreaOfEffect, CombatStats, Confusion, Consumable, InBackpack, InflictsDamage, Name, Position,
     ProvidesHealing, SufferDamage, WantsToDropItem, WantsToPickupItem, WantsToUseItem,
 };
 use super::gamelog::GameLog;
@@ -63,6 +63,7 @@ impl<'a> System<'a> for ItemUseSystem {
         WriteStorage<'a, CombatStats>,
         WriteStorage<'a, SufferDamage>,
         ReadStorage<'a, AreaOfEffect>,
+        WriteStorage<'a, Confusion>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
@@ -79,6 +80,7 @@ impl<'a> System<'a> for ItemUseSystem {
             mut combat_stats,
             mut suffer_damage,
             aoe,
+            mut confused,
         ) = data;
 
         for (entity, useitem) in (&entities, &wants_use).join() {
@@ -173,6 +175,35 @@ impl<'a> System<'a> for ItemUseSystem {
                         used_item = true;
                     }
                 }
+            }
+
+            // Can it pass along confusion?
+            let mut add_confusion = Vec::new();
+            {
+                let causes_confusion = confused.get(useitem.item);
+                match causes_confusion {
+                    None => {}
+                    Some(confusion) => {
+                        used_item = false;
+                        for mob in targets.iter() {
+                            add_confusion.push((*mob, confusion.turns));
+                            if entity == *player_entity {
+                                let mob_name = names.get(*mob).unwrap();
+                                let item_name = names.get(useitem.item).unwrap();
+                                gamelog.entries.insert(
+                                    0,
+                                    format!(
+                                        "You use {} on {}, confusing them.",
+                                        item_name.name, mob_name.name
+                                    ),
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+            for mob in add_confusion.iter() {
+                confused.insert(mob.0, Confusion{ turns: mob.1 }).expect("Unable to insert status");
             }
 
             let consumable = consumables.get(useitem.item);

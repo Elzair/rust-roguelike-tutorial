@@ -7,7 +7,7 @@ extern crate specs_derive;
 
 mod components;
 pub use components::{
-    AreaOfEffect, BlocksTile, CombatStats, Consumable, InBackpack, InflictsDamage, Item, 
+    AreaOfEffect, BlocksTile, CombatStats, Confusion, Consumable, InBackpack, InflictsDamage, Item, 
     Monster, Name, Player, Position, ProvidesHealing, Ranged, Renderable, SufferDamage, 
     Viewshed, WantsToDropItem, WantsToMelee, WantsToPickupItem, WantsToUseItem,
 };
@@ -207,6 +207,7 @@ fn main() {
     gs.ecs.register::<InflictsDamage>();
     gs.ecs.register::<Ranged>();
     gs.ecs.register::<AreaOfEffect>();
+    gs.ecs.register::<Confusion>();
 
     let map = Map::new_map_rooms_and_corridors();
     let (player_x, player_y) = map.rooms[0].center();
