@@ -36,6 +36,7 @@ pub use visibility_system::VisibilitySystem;
 #[derive(Clone, Copy, PartialEq)]
 pub enum RunState {
     AwaitingInput,
+    MainMenu { menu_selection: gui::MainMenuSelection },
     MonsterTurn,
     PlayerTurn,
     PreRun,
@@ -72,29 +73,35 @@ impl State {
 
 impl GameState for State {
     fn tick(&mut self, ctx: &mut Rltk) {
-        ctx.cls();
-
-        draw_map(&self.ecs, ctx);
-
-        {
-            let positions = self.ecs.read_storage::<Position>();
-            let renderables = self.ecs.read_storage::<Renderable>();
-            let map = self.ecs.fetch::<Map>();
-            let mut data = (&positions, &renderables).join().collect::<Vec<_>>();
-            data.sort_by(|&a, &b| b.1.render_order.cmp(&a.1.render_order));
-            for (pos, render) in data.iter() {
-                let idx = map.xy_idx(pos.x, pos.y).unwrap();
-                if map.visible_tiles[idx] {
-                    ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
-                }
-            }
-            gui::draw_ui(&self.ecs, ctx);
-        }
-
         let mut newrunstate: RunState;
         {
             let runstate = self.ecs.fetch::<RunState>();
             newrunstate = *runstate;
+        }
+
+        ctx.cls();
+
+        match newrunstate {
+            RunState::MainMenu{..} => {}
+            _ => {
+                draw_map(&self.ecs, ctx);
+                {
+                    let positions = self.ecs.read_storage::<Position>();
+                    let renderables = self.ecs.read_storage::<Renderable>();
+                    let map = self.ecs.fetch::<Map>();
+
+                    let mut data = (&positions, &renderables).join().collect::<Vec<_>>();
+                    data.sort_by(|&a, &b| b.1.render_order.cmp(&a.1.render_order));
+                    for (pos, render) in data.iter() {
+                        let idx = map.xy_idx(pos.x, pos.y).unwrap();
+                        if map.visible_tiles[idx] {
+                            ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
+                        }
+                    }
+
+                    gui::draw_ui(&self.ecs, ctx);
+                }
+            }
         }
 
         match newrunstate {
@@ -106,10 +113,28 @@ impl GameState for State {
             RunState::AwaitingInput => {
                 newrunstate = player_input(self, ctx);
             }
+
             RunState::PlayerTurn => {
                 self.run_systems();
                 self.ecs.maintain();
                 newrunstate = RunState::MonsterTurn;
+            }
+            RunState::MainMenu{ .. } => {
+                use gui::MainMenuResult::*;
+                use gui::MainMenuSelection::*;
+                let result = gui::main_menu(self, ctx);
+                match result {
+                    NoSelection{ selected } => {
+                        newrunstate = RunState::MainMenu{ menu_selection: selected }
+                    }
+                    Selected{ selected } => {
+                        match selected {
+                            NewGame => newrunstate = RunState::PreRun,
+                            LoadGame => newrunstate = RunState::PreRun,
+                            Quit => { ::std::process::exit(0); }
+                        }
+                    }
+                }
             }
             RunState::MonsterTurn => {
                 self.run_systems();
