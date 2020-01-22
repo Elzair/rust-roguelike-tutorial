@@ -8,7 +8,7 @@ use rltk::{RandomNumberGenerator, RGB};
 use specs::prelude::*;
 
 const MAX_MONSTERS: i32 = 4;
-const MAX_ITEMS: i32 = 2;
+const MAX_ITEMS: i32 = 4;
 
 /// Spawns the player and returns their entity object.
 pub fn player(ecs: &mut World, player_x: i32, player_y: i32) -> Entity {
@@ -33,8 +33,8 @@ pub fn player(ecs: &mut World, player_x: i32, player_y: i32) -> Entity {
             name: "Player".to_string(),
         })
         .with(CombatStats {
-            max_hp: 30,
-            hp: 30,
+            max_hp: 50,
+            hp: 50,
             defense: 2,
             power: 5,
         })
@@ -143,7 +143,7 @@ fn monster<S: ToString>(ecs: &mut World, x: i32, y: i32, glyph: u8, name: S) {
 fn random_item(ecs: &mut World, x: i32, y: i32) {
     let roll = {
         let mut rng = ecs.write_resource::<RandomNumberGenerator>();
-        rng.roll_dice(1, 2)
+        rng.roll_dice(1, 4)
     };
     match roll {
         1 => health_potion(ecs, x, y),
