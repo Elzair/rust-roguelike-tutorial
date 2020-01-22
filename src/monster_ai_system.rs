@@ -75,8 +75,8 @@ impl<'a> System<'a> for MonsterAI {
                         if path.success && path.steps.len() > 1 {
                             let mut idx = map.xy_idx(pos.x, pos.y).unwrap();
                             map.blocked[idx] = false;
-                            pos.x = path.steps[1] % map.width;
-                            pos.y = path.steps[1] / map.width;
+                            pos.x = path.steps[1] as i32 % map.width;
+                            pos.y = path.steps[1] as i32 / map.width;
                             idx = map.xy_idx(pos.x, pos.y).unwrap();
                             map.blocked[idx] = true;
                             viewshed.dirty = true;
