@@ -203,14 +203,19 @@ impl<'a> System<'a> for ItemUseSystem {
                 }
             }
             for mob in add_confusion.iter() {
-                confused.insert(mob.0, Confusion{ turns: mob.1 }).expect("Unable to insert status");
+                confused
+                    .insert(mob.0, Confusion { turns: mob.1 })
+                    .expect("Unable to insert status");
             }
 
-            let consumable = consumables.get(useitem.item);
-            match consumable {
-                None => {}
-                Some(_) => {
-                    entities.delete(useitem.item).expect("Delete failed");
+            // Delete item if it is a consumable that has benn used
+            if used_item {
+                let consumable = consumables.get(useitem.item);
+                match consumable {
+                    None => {}
+                    Some(_) => {
+                        entities.delete(useitem.item).expect("Delete failed");
+                    }
                 }
             }
         }
