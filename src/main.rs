@@ -7,7 +7,8 @@ extern crate specs_derive;
 
 mod components;
 pub use components::{
-    AreaOfEffect, BlocksTile, CombatStats, Confusion, Consumable, InBackpack, InflictsDamage, Item,
+    AreaOfEffect, BlocksTile, CombatStats, Confusion, Consumable, Equippable, Equipped,
+    InBackpack, InflictsDamage, Item,
     Monster, Name, Player, Position, ProvidesHealing, Ranged, Renderable, SerializationHelper,
     SerializeMe, SufferDamage, Viewshed, WantsToDropItem, WantsToMelee, WantsToPickupItem,
     WantsToUseItem,
@@ -134,6 +135,7 @@ impl State {
         let player = self.ecs.read_storage::<Player>();
         let backpack = self.ecs.read_storage::<InBackpack>();
         let player_entity = self.ecs.fetch::<Entity>();
+        let equipped = self.ecs.read_storage::<Equipped>();
 
         let mut to_delete: Vec<Entity> = Vec::new();
         for entity in entities.join() {
@@ -145,10 +147,16 @@ impl State {
                 should_delete = false;
             }
 
-            // Don't delete the player's equipment
+            // Don't delete the player's equipment or inventory
             let bp = backpack.get(entity);
             if let Some(bp) = bp {
                 if bp.owner == *player_entity {
+                    should_delete = false;
+                }
+            }
+            let eq = equipped.get(entity);
+            if let Some(eq) = eq {
+                if eq.owner == *player_entity {
                     should_delete = false;
                 }
             }
@@ -352,6 +360,8 @@ fn main() {
     gs.ecs.register::<Confusion>();
     gs.ecs.register::<SimpleMarker<SerializeMe>>();
     gs.ecs.register::<SerializationHelper>();
+    gs.ecs.register::<Equippable>();
+    gs.ecs.register::<Equipped>();
 
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
 

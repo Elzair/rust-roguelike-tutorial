@@ -28,6 +28,20 @@ pub struct Confusion {
 #[derive(Clone, Component, Debug, Deserialize, Serialize)]
 pub struct Consumable {}
 
+#[derive(Clone, Copy, Deserialize, PartialEq, Serialize)]
+pub enum EquipmentSlot { Melee, Shield, }
+
+#[derive(Clone, Component, Deserialize, Serialize)]
+pub struct Equippable {
+    pub slot: EquipmentSlot,
+}
+
+#[derive(Clone, Component, ConvertSaveload)]
+pub struct Equipped {
+    pub owner: Entity,
+    pub slot: EquipmentSlot,
+}
+
 #[derive(Clone, Component, ConvertSaveload, Debug)]
 pub struct InBackpack {
     pub owner: Entity,
@@ -117,3 +131,31 @@ pub struct SerializeMe;
 pub struct SerializationHelper {
     pub map : super::map::Map
 }
+
+// // Wrapper for Equipped
+// #[derive(Clone, Deserialize, Serialize)]
+// pub struct EquippedData<M>(M, EquipmentSlot);
+
+// impl<M: Marker + Serialize> ConvertSaveload<M> for Equipped
+// where
+//     for<'de> M: Deserialize<'de>,
+// {
+//     type Data = EquippedData<M>;
+//     type Error = NoError;
+
+//     fn convert_into<F>(&self, mut ids: F) -> Result<Self::Data, Self::Error>
+//     where
+//         F: FnMut(Entity) -> Option<M>,
+//     {
+//         let marker = ids(self.owner).unwrap();
+//         Ok(EquippedData(marker, self.slot))
+//     }
+
+//     fn convert_from<F>(data: Self::Data, mut ids: F) -> Result<Self, Self::Error>
+//     where
+//         F: FnMut(M) -> Option<Entity>,
+//     {
+//         let entity = ids(data.0).unwrap();
+//         Ok(Equipped(owner: entity, slot: data.1))
+//     }
+// }
