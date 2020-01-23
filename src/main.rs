@@ -28,6 +28,7 @@ mod monster_ai_system;
 pub use monster_ai_system::MonsterAI;
 mod player;
 pub use player::*;
+mod random_table;
 mod rect;
 pub use rect::*;
 mod saveload_system;

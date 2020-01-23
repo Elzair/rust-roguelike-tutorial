@@ -1,4 +1,5 @@
-use super::components::{CombatStats, Item, Player, Position, Viewshed, WantsToPickupItem, WantsToMelee};
+use super::components::{CombatStats, Item, Monster, Player, Position, Viewshed, 
+    WantsToPickupItem, WantsToMelee};
 use super::gamelog::GameLog;
 use super::map::{Map, TileType};
 use super::{RunState, State};
@@ -75,6 +76,8 @@ pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState {
                     return RunState::NextLevel;
                 }
             }
+            VirtualKeyCode::Numpad5 => return skip_turn(&mut gs.ecs),
+            VirtualKeyCode::Space => return skip_turn(&mut gs.ecs),
             
             // Metagame Actions
             VirtualKeyCode::Escape => return RunState::SaveGame,
@@ -96,6 +99,36 @@ pub fn try_next_level(ecs: &mut World) -> bool {
         gamelog.entries.insert(0, "There is no way to go down from here.".to_string());
         false
     }
+}
+
+fn skip_turn(ecs: &mut World) -> RunState {
+    let player_entity = ecs.fetch::<Entity>();
+    let viewshed_components = ecs.read_storage::<Viewshed>();
+    let monsters = ecs.read_storage::<Monster>();
+
+    let worldmap_resource = ecs.fetch::<Map>();
+
+    // Heal player if no monsters are around.
+    let mut can_heal = true;
+    let viewshed = viewshed_components.get(*player_entity).unwrap();
+    for tile in viewshed.visible_tiles.iter() {
+        let idx = worldmap_resource.xy_idx(tile.x, tile.y).unwrap();
+        for entity_id in worldmap_resource.tile_content[idx].iter() {
+            let mob = monsters.get(*entity_id);
+            match mob {
+                None => {}
+                Some(_) => { can_heal = false; }
+            }
+        }
+    }
+
+    if can_heal {
+        let mut health_components = ecs.write_storage::<CombatStats>();
+        let player_hp = health_components.get_mut(*player_entity).unwrap();
+        player_hp.hp = i32::min(player_hp.hp + 1, player_hp.max_hp);
+    }
+
+    RunState::PlayerTurn
 }
 
 fn get_item(ecs: &mut World) {
