@@ -7,11 +7,10 @@ extern crate specs_derive;
 
 mod components;
 pub use components::{
-    AreaOfEffect, BlocksTile, CombatStats, Confusion, Consumable, DefenseBonus, 
-    Equippable, Equipped, InBackpack, InflictsDamage, Item, MeleePowerBonus,
-    Monster, Name, Player, Position, ProvidesHealing, Ranged, Renderable, SerializationHelper,
-    SerializeMe, SufferDamage, Viewshed, WantsToDropItem, WantsToMelee, WantsToPickupItem,
-    WantsToRemoveItem, WantsToUseItem,
+    AreaOfEffect, BlocksTile, CombatStats, Confusion, Consumable, DefenseBonus, Equippable,
+    Equipped, InBackpack, InflictsDamage, Item, MeleePowerBonus, Monster, Name, Player, Position,
+    ProvidesHealing, Ranged, Renderable, SerializationHelper, SerializeMe, SufferDamage, Viewshed,
+    WantsToDropItem, WantsToMelee, WantsToPickupItem, WantsToRemoveItem, WantsToUseItem,
 };
 mod damage_system;
 pub use damage_system::DamageSystem;
@@ -40,6 +39,7 @@ pub use visibility_system::VisibilitySystem;
 #[derive(Clone, Copy, PartialEq)]
 pub enum RunState {
     AwaitingInput,
+    GameOver,
     MainMenu {
         menu_selection: gui::MainMenuSelection,
     },
@@ -81,7 +81,7 @@ impl State {
         drop_items.run_now(&self.ecs);
         let mut item_remove = ItemRemoveSystem {};
         item_remove.run_now(&self.ecs);
-        
+
         self.ecs.maintain();
     }
 
@@ -89,7 +89,9 @@ impl State {
         // Delete entities that are not the player or their equipment.
         let to_delete = self.entities_to_remove_on_level_change();
         for target in to_delete {
-            self.ecs.delete_entity(target).expect("Unable to delete entity");
+            self.ecs
+                .delete_entity(target)
+                .expect("Unable to delete entity");
         }
 
         // Build a new map and place the player
@@ -97,7 +99,7 @@ impl State {
             let mut worldmap_resource = self.ecs.write_resource::<Map>();
             let current_depth = worldmap_resource.depth;
             *worldmap_resource = Map::new_map_rooms_and_corridors(current_depth + 1);
-            (worldmap_resource.clone(), current_depth+1)
+            (worldmap_resource.clone(), current_depth + 1)
         };
 
         // Spawn bad guys
@@ -117,7 +119,7 @@ impl State {
             player_pos_comp.y = player_y;
         }
 
-        // Mark the player's visibility as dirty. 
+        // Mark the player's visibility as dirty.
         let mut viewshed_components = self.ecs.write_storage::<Viewshed>();
         let vs = viewshed_components.get_mut(*player_entity);
         if let Some(vs) = vs {
@@ -126,7 +128,10 @@ impl State {
 
         // Notify the player and give them some health
         let mut gamelog = self.ecs.fetch_mut::<gamelog::GameLog>();
-        gamelog.entries.insert(0, "You descend to the next level and take a moment to heal.".to_string());
+        gamelog.entries.insert(
+            0,
+            "You descend to the next level and take a moment to heal.".to_string(),
+        );
         let mut player_health_store = self.ecs.write_storage::<CombatStats>();
         let player_health = player_health_store.get_mut(*player_entity);
         if let Some(player_health) = player_health {
@@ -172,6 +177,51 @@ impl State {
 
         to_delete
     }
+
+    fn game_over_cleanup(&mut self) {
+        // Delete everything
+        let mut to_delete = Vec::new();
+        for e in self.ecs.entities().join() {
+            to_delete.push(e);
+        }
+        for del in to_delete.iter() {
+            self.ecs.delete_entity(*del).expect("Deletion failed");
+        }
+
+        // Build a new map and place the player
+        let worldmap;
+        {
+            let mut worldmap_resource = self.ecs.write_resource::<Map>();
+            *worldmap_resource = Map::new_map_rooms_and_corridors(1);
+            worldmap = worldmap_resource.clone();
+        }
+
+        // Spawn bad guys
+        for room in worldmap.rooms.iter().skip(1) {
+            spawner::spawn_room(&mut self.ecs, room, 1);
+        }
+
+        // Place the player and update resources
+        let (player_x, player_y) = worldmap.rooms[0].center();
+        let player_entity = spawner::player(&mut self.ecs, player_x, player_y);
+        let mut player_position = self.ecs.write_resource::<Point>();
+        *player_position = Point::new(player_x, player_y);
+        let mut position_components = self.ecs.write_storage::<Position>();
+        let mut player_entity_writer = self.ecs.write_resource::<Entity>();
+        *player_entity_writer = player_entity;
+        let player_pos_comp = position_components.get_mut(player_entity);
+        if let Some(player_pos_comp) = player_pos_comp {
+            player_pos_comp.x = player_x;
+            player_pos_comp.y = player_y;
+        }
+
+        // Mark the player's visibility as dirty
+        let mut viewshed_components = self.ecs.write_storage::<Viewshed>();
+        let vs = viewshed_components.get_mut(player_entity);
+        if let Some(vs) = vs {
+            vs.dirty = true;
+        }
+    }
 }
 
 impl GameState for State {
@@ -210,6 +260,18 @@ impl GameState for State {
         match newrunstate {
             RunState::AwaitingInput => {
                 newrunstate = player_input(self, ctx);
+            }
+            RunState::GameOver => {
+                let result = gui::game_over(ctx);
+                match result {
+                    gui::GameOverResult::NoSelection => {}
+                    gui::GameOverResult::QuitToMenu => {
+                        self.game_over_cleanup();
+                        newrunstate = RunState::MainMenu {
+                            menu_selection: gui::MainMenuSelection::NewGame,
+                        };
+                    }
+                }
             }
             RunState::MainMenu { .. } => {
                 use gui::MainMenuResult::*;
@@ -315,7 +377,12 @@ impl GameState for State {
                     gui::ItemMenuResult::Selected => {
                         let item_entity = result.1.unwrap();
                         let mut intent = self.ecs.write_storage::<WantsToRemoveItem>();
-                        intent.insert(*self.ecs.fetch::<Entity>(), WantsToRemoveItem{ item: item_entity }).expect("Unable to insert intent");
+                        intent
+                            .insert(
+                                *self.ecs.fetch::<Entity>(),
+                                WantsToRemoveItem { item: item_entity },
+                            )
+                            .expect("Unable to insert intent");
                         newrunstate = RunState::PlayerTurn
                     }
                 }

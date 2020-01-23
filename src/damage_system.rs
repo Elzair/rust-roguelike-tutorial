@@ -1,7 +1,8 @@
+use specs::prelude::*;
+
+use super::RunState;
 use super::components::{CombatStats, Name, Player, SufferDamage};
 use super::gamelog::GameLog;
-use rltk::console;
-use specs::prelude::*;
 
 pub struct DamageSystem {}
 
@@ -43,7 +44,10 @@ pub fn delete_the_dead(ecs: &mut World) {
                         }
                         dead.push(entity);
                     },
-                    Some(_) => console::log("You are dead"),
+                    Some(_) => {
+                        let mut runstate = ecs.write_resource::<RunState>();
+                        *runstate = RunState::GameOver;
+                    },
                 }
             }
         }
