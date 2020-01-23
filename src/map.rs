@@ -23,6 +23,7 @@ pub struct Map {
     pub revealed_tiles: Vec<bool>,
     pub visible_tiles: Vec<bool>,
     pub blocked: Vec<bool>,
+    pub depth: i32,
 
     #[serde(skip_serializing)]
     #[serde(skip_deserializing)]
@@ -78,7 +79,7 @@ impl Map {
         }
     }
 
-    pub fn new_map_rooms_and_corridors() -> Self {
+    pub fn new_map_rooms_and_corridors(new_depth: i32) -> Self {
         let mut map = Map {
             tiles: vec![TileType::Wall; MAPCOUNT],
             rooms: Vec::new(),
@@ -88,6 +89,7 @@ impl Map {
             visible_tiles: vec![false; MAPCOUNT],
             blocked: vec![false; MAPCOUNT],
             tile_content: vec![Vec::new(); MAPCOUNT],
+            depth: new_depth,
         };
 
         const MAX_ROOMS: i32 = 30;
