@@ -21,6 +21,7 @@ macro_rules! serialize_individually {
     };
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn save_game(ecs: &mut World) {
     // Create helper
     let mapcopy = ecs.get_mut::<Map>().unwrap().clone();
@@ -45,6 +46,11 @@ pub fn save_game(ecs: &mut World) {
 
     // Clean up
     ecs.delete_entity(savehelper).expect("Crash on cleanup");
+}
+
+// This is needed until WASM save support is implemented in RLTK.
+#[cfg(target_arch = "wasm32")]
+pub fn save_game(_ecs : &mut World) {
 }
 
 macro_rules! deserialize_individually {
