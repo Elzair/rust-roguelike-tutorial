@@ -88,16 +88,16 @@ impl State {
         }
 
         // Build a new map and place the player
-        let worldmap = {
+        let (worldmap, new_depth) = {
             let mut worldmap_resource = self.ecs.write_resource::<Map>();
             let current_depth = worldmap_resource.depth;
             *worldmap_resource = Map::new_map_rooms_and_corridors(current_depth + 1);
-            worldmap_resource.clone()
+            (worldmap_resource.clone(), current_depth+1)
         };
 
         // Spawn bad guys
         for room in worldmap.rooms.iter().skip(1) {
-            spawner::spawn_room(&mut self.ecs, room);
+            spawner::spawn_room(&mut self.ecs, room, new_depth);
         }
 
         // Place the player and update resources
@@ -363,7 +363,7 @@ fn main() {
     // Populate rooms with monsters
     gs.ecs.insert(rltk::RandomNumberGenerator::new());
     for room in map.rooms.iter().skip(1) {
-        spawner::spawn_room(&mut gs.ecs, room);
+        spawner::spawn_room(&mut gs.ecs, room, 1);
     }
 
     gs.ecs.insert(map);
