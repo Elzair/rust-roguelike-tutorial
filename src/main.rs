@@ -11,14 +11,14 @@ pub use components::{
     Equippable, Equipped, InBackpack, InflictsDamage, Item, MeleePowerBonus,
     Monster, Name, Player, Position, ProvidesHealing, Ranged, Renderable, SerializationHelper,
     SerializeMe, SufferDamage, Viewshed, WantsToDropItem, WantsToMelee, WantsToPickupItem,
-    WantsToUseItem,
+    WantsToRemoveItem, WantsToUseItem,
 };
 mod damage_system;
 pub use damage_system::DamageSystem;
 mod gamelog;
 mod gui;
 mod inventory_system;
-pub use inventory_system::{ItemCollectionSystem, ItemDropSystem, ItemUseSystem};
+pub use inventory_system::{ItemCollectionSystem, ItemDropSystem, ItemRemoveSystem, ItemUseSystem};
 mod map;
 pub use map::*;
 mod map_indexing_system;
@@ -50,6 +50,7 @@ pub enum RunState {
     SaveGame,
     ShowDropItem,
     ShowInventory,
+    ShowRemoveItem,
     ShowTargeting {
         range: i32,
         item: Entity,
@@ -78,6 +79,9 @@ impl State {
         items.run_now(&self.ecs);
         let mut drop_items = ItemDropSystem {};
         drop_items.run_now(&self.ecs);
+        let mut item_remove = ItemRemoveSystem {};
+        item_remove.run_now(&self.ecs);
+        
         self.ecs.maintain();
     }
 
@@ -303,6 +307,19 @@ impl GameState for State {
                     }
                 }
             }
+            RunState::ShowRemoveItem => {
+                let result = gui::remove_item_menu(self, ctx);
+                match result.0 {
+                    gui::ItemMenuResult::Cancel => newrunstate = RunState::AwaitingInput,
+                    gui::ItemMenuResult::NoResponse => {}
+                    gui::ItemMenuResult::Selected => {
+                        let item_entity = result.1.unwrap();
+                        let mut intent = self.ecs.write_storage::<WantsToRemoveItem>();
+                        intent.insert(*self.ecs.fetch::<Entity>(), WantsToRemoveItem{ item: item_entity }).expect("Unable to insert intent");
+                        newrunstate = RunState::PlayerTurn
+                    }
+                }
+            }
             RunState::ShowTargeting { range, item } => {
                 let result = gui::ranged_target(self, ctx, range);
                 match result.0 {
@@ -364,6 +381,7 @@ fn main() {
     gs.ecs.register::<Equipped>();
     gs.ecs.register::<DefenseBonus>();
     gs.ecs.register::<MeleePowerBonus>();
+    gs.ecs.register::<WantsToRemoveItem>();
 
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
 
