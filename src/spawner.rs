@@ -4,8 +4,8 @@ use specs::saveload::{MarkedBuilder, SimpleMarker};
 use std::collections::HashMap;
 
 use super::components::{
-    AreaOfEffect, BlocksTile, CombatStats, Confusion, Consumable, EquipmentSlot, Equippable,
-    InflictsDamage, Item, Monster,
+    AreaOfEffect, BlocksTile, CombatStats, Confusion, Consumable, DefenseBonus,
+    EquipmentSlot, Equippable, InflictsDamage, Item, MeleePowerBonus, Monster,
     Name, Player, Position, ProvidesHealing, Ranged, Renderable, SerializeMe, Viewshed,
 };
 use super::map::MAPWIDTH;
@@ -232,6 +232,7 @@ fn dagger(ecs: &mut World, x: i32, y: i32) {
         .with(Name{ name : "Dagger".to_string() })
         .with(Item{})
         .with(Equippable{ slot: EquipmentSlot::Melee })
+        .with(MeleePowerBonus{ power: 2 })
         .marked::<SimpleMarker<SerializeMe>>()
         .build();
 }
@@ -248,6 +249,7 @@ fn shield(ecs: &mut World, x: i32, y: i32) {
         .with(Name{ name : "Shield".to_string() })
         .with(Item{})
         .with(Equippable{ slot: EquipmentSlot::Shield })
+        .with(DefenseBonus{ defense: 1 })
         .marked::<SimpleMarker<SerializeMe>>()
         .build();
 }

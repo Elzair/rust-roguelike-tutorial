@@ -7,8 +7,8 @@ extern crate specs_derive;
 
 mod components;
 pub use components::{
-    AreaOfEffect, BlocksTile, CombatStats, Confusion, Consumable, Equippable, Equipped,
-    InBackpack, InflictsDamage, Item,
+    AreaOfEffect, BlocksTile, CombatStats, Confusion, Consumable, DefenseBonus, 
+    Equippable, Equipped, InBackpack, InflictsDamage, Item, MeleePowerBonus,
     Monster, Name, Player, Position, ProvidesHealing, Ranged, Renderable, SerializationHelper,
     SerializeMe, SufferDamage, Viewshed, WantsToDropItem, WantsToMelee, WantsToPickupItem,
     WantsToUseItem,
@@ -362,6 +362,8 @@ fn main() {
     gs.ecs.register::<SerializationHelper>();
     gs.ecs.register::<Equippable>();
     gs.ecs.register::<Equipped>();
+    gs.ecs.register::<DefenseBonus>();
+    gs.ecs.register::<MeleePowerBonus>();
 
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
 

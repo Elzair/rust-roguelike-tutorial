@@ -28,6 +28,11 @@ pub struct Confusion {
 #[derive(Clone, Component, Debug, Deserialize, Serialize)]
 pub struct Consumable {}
 
+#[derive(Clone, Component, ConvertSaveload)]
+pub struct DefenseBonus {
+    pub defense: i32, 
+}
+
 #[derive(Clone, Copy, Deserialize, PartialEq, Serialize)]
 pub enum EquipmentSlot { Melee, Shield, }
 
@@ -49,6 +54,11 @@ pub struct InBackpack {
 
 #[derive(Clone, Component, Debug, Deserialize, Serialize)]
 pub struct Item {}
+
+#[derive(Clone, Component, ConvertSaveload)]
+pub struct MeleePowerBonus {
+    pub power: i32,
+}
 
 #[derive(Clone, Component, Debug, Deserialize, Serialize)]
 pub struct Monster {}
