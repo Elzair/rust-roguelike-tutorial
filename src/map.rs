@@ -3,6 +3,7 @@ use rltk::{Algorithm2D, BaseMap, Console, Point, RandomNumberGenerator, Rltk, RG
 use serde::{Deserialize, Serialize};
 use specs::prelude::*;
 use std::cmp::{max, min};
+use std::collections::HashSet;
 
 pub const MAPWIDTH: usize = 80;
 pub const MAPHEIGHT: usize = 43;
@@ -25,6 +26,7 @@ pub struct Map {
     pub visible_tiles: Vec<bool>,
     pub blocked: Vec<bool>,
     pub depth: i32,
+    pub bloodstains: HashSet<usize>,
 
     #[serde(skip_serializing)]
     #[serde(skip_deserializing)]
@@ -97,6 +99,7 @@ impl Map {
             blocked: vec![false; MAPCOUNT],
             tile_content: vec![Vec::new(); MAPCOUNT],
             depth: new_depth,
+            bloodstains: HashSet::new()
         };
 
         const MAX_ROOMS: i32 = 30;
@@ -197,8 +200,15 @@ pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
                 TileType::Wall => (wall_glyph(&*map, x, y), RGB::from_f32(0.0, 1.0, 0.)),
             };
 
+            // Render bloodstain, if present
+            let bg = if map.bloodstains.contains(&idx) { 
+                RGB::from_f32(0.75, 0.0, 0.0) 
+            } else { 
+                RGB::from_f32(0.0, 0.0, 0.0) 
+            };
+
             if !map.visible_tiles[idx] { fg = fg.to_greyscale() }
-            ctx.set(x, y, fg, RGB::from_f32(0., 0., 0.), glyph);
+            ctx.set(x, y, fg, bg, glyph);
         }
 
         // Move the coordinates

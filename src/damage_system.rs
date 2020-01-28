@@ -1,8 +1,9 @@
 use specs::prelude::*;
 
 use super::RunState;
-use super::components::{CombatStats, Name, Player, SufferDamage};
+use super::components::{CombatStats, Name, Player, Position, SufferDamage};
 use super::gamelog::GameLog;
+use super::map::Map;
 
 pub struct DamageSystem {}
 
@@ -10,13 +11,23 @@ impl<'a> System<'a> for DamageSystem {
     type SystemData = (
         WriteStorage<'a, CombatStats>,
         WriteStorage<'a, SufferDamage>,
+        ReadStorage<'a, Position>,
+        WriteExpect<'a, Map>,
+        Entities<'a>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (mut stats, mut damage) = data;
+        let (mut stats, mut damage, positions, mut map, entities) = data;
 
-        for (mut stats, damage) in (&mut stats, &damage).join() {
+        for (entity, mut stats, damage) in (&entities, &mut stats, &damage).join() {
             stats.hp -= damage.amount;
+
+            // Determine if a bloodstain forms
+            let pos = positions.get(entity);
+            if let Some(pos) = pos {
+                let idx = map.xy_idx(pos.x, pos.y).unwrap();
+                map.bloodstains.insert(idx);
+            }
         }
 
         damage.clear();
