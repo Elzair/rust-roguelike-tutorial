@@ -33,13 +33,15 @@ pub struct Map {
 
 impl Map {
     pub fn xy_idx(&self, x: i32, y: i32) -> Option<usize> {
-        if x < 0 || x > self.width-1 || y < 0 || y >= self.height-1 { None }
-        else { Some((y as usize * self.width as usize) + x as usize) }
+        let idx = (y as usize * self.width as usize) + x as usize;
+        if idx < self.width as usize * self.height as usize { Some(idx) }
+        else { None }
     }
 
     fn is_exit_valid(&self, x: i32, y: i32) -> bool {
-        if let Some(idx) = self.xy_idx(x, y) { !self.blocked[idx] } 
-        else { false }
+        if x < 1 || x > self.width-1 || y < 1 || y > self.height-1 { return false; }
+        let idx = self.xy_idx(x, y).unwrap();
+        !self.blocked[idx]
     }
 
     pub fn populate_blocked(&mut self) {
@@ -55,8 +57,8 @@ impl Map {
     }
 
     fn apply_room_to_map(&mut self, room: &Rect) {
-        for y in room.y1 + 1..=room.y2 {
-            for x in room.x1 + 1..=room.x2 {
+        for y in room.y1+1..=room.y2 {
+            for x in room.x1+1..=room.x2 {
                 if let Some(idx) = self.xy_idx(x, y) {
                     self.tiles[idx] = TileType::Floor;
                 }
@@ -67,7 +69,9 @@ impl Map {
     fn apply_horizontal_tunnel(&mut self, x1: i32, x2: i32, y: i32) {
         for x in min(x1, x2)..=max(x1, x2) {
             if let Some(idx) = self.xy_idx(x, y) {
-                self.tiles[idx as usize] = TileType::Floor;
+                if idx > 0 {
+                    self.tiles[idx as usize] = TileType::Floor;
+                }
             }
         }
     }
@@ -75,7 +79,9 @@ impl Map {
     fn apply_vertical_tunnel(&mut self, y1: i32, y2: i32, x: i32) {
         for y in min(y1, y2)..=max(y1, y2) {
             if let Some(idx) = self.xy_idx(x, y) {
-                self.tiles[idx as usize] = TileType::Floor;
+                if idx > 0 {
+                    self.tiles[idx as usize] = TileType::Floor;
+                }
             }
         }
     }
@@ -107,16 +113,14 @@ impl Map {
             let new_room = Rect::new(x, y, w, h);
             let mut ok = true;
             for other_room in map.rooms.iter() {
-                if new_room.intersects(other_room) {
-                    ok = false
-                }
+                if new_room.intersects(other_room) { ok = false; }
             }
             if ok {
                 map.apply_room_to_map(&new_room);
 
                 if !map.rooms.is_empty() {
                     let (new_x, new_y) = new_room.center();
-                    let (prev_x, prev_y) = map.rooms[map.rooms.len() - 1].center();
+                    let (prev_x, prev_y) = map.rooms[map.rooms.len()-1].center();
                     if rng.range(0, 2) == 1 {
                         map.apply_horizontal_tunnel(prev_x, new_x, prev_y);
                         map.apply_vertical_tunnel(prev_y, new_y, new_x);
@@ -190,7 +194,7 @@ pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
             let (glyph, mut fg) = match tile {
                 TileType::DownStairs => (rltk::to_cp437('>'), RGB::from_f32(0.0, 1.0, 1.0)),
                 TileType::Floor => (rltk::to_cp437('.'), RGB::from_f32(0.0, 0.5, 0.5)),
-                TileType::Wall => (rltk::to_cp437('#'), RGB::from_f32(0.0, 1.0, 0.)),
+                TileType::Wall => (wall_glyph(&*map, x, y), RGB::from_f32(0.0, 1.0, 0.)),
             };
 
             if !map.visible_tiles[idx] { fg = fg.to_greyscale() }
@@ -204,4 +208,38 @@ pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
             y += 1;
         }
     }
+}
+
+fn wall_glyph(map: &Map, x: i32, y: i32) -> u8 {
+    if x < 1 || x > map.width-2 || y < 1 || y > map.height-2 as i32 { return 35; }
+    let mut mask: u8 = 0;
+
+    if is_revealed_and_wall(map, x, y-1) { mask += 1; }
+    if is_revealed_and_wall(map, x, y+1) { mask += 2; }
+    if is_revealed_and_wall(map, x-1, y) { mask += 4; }
+    if is_revealed_and_wall(map, x+1, y) { mask += 8; }
+
+    match mask {
+        0 => 9,     // Pillar because we cannot see neighbors
+        1 => 186,   // Wall to north
+        2 => 186,   // Wall to south
+        3 => 186,   // Wall to north and south
+        4 => 205,   // Wall to west
+        5 => 188,   // Wall to north and west
+        6 => 187,   // Wall to south and west
+        7 => 185,   // Wall to north, south, and west
+        8 => 205,   // Wall to east
+        9 => 200,   // Wall to north and east
+        10 => 201,  // Wall to south and east
+        11 => 204,  // Wall to north, south, and east
+        12 => 205,  // Wall to east and west
+        13 => 202,  // Wall to east, west, and south
+        14 => 203,  // Wall to east, west, and north
+        _ => 35     // We missed one?
+    }
+}
+
+fn is_revealed_and_wall(map: &Map, x: i32, y: i32) -> bool {
+    let idx = map.xy_idx(x, y).unwrap();
+    map.tiles[idx] == TileType::Wall && map.revealed_tiles[idx]
 }
