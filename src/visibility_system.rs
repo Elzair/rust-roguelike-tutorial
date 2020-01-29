@@ -14,14 +14,14 @@ impl<'a> System<'a> for VisibilitySystem {
         WriteStorage<'a, Viewshed>,
         ReadStorage<'a, Position>,
         ReadStorage<'a, Player>,
-        // WriteStorage<'a, Hidden>,
-        // WriteExpect<'a, RandomNumberGenerator>,
-        // WriteExpect<'a, GameLog>,
-        // ReadStorage<'a, Name>,
+        WriteStorage<'a, Hidden>,
+        WriteExpect<'a, RandomNumberGenerator>,
+        WriteExpect<'a, GameLog>,
+        ReadStorage<'a, Name>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (mut map, entities, mut viewshed, pos, player, /*mut hidden, mut rng, mut log, names*/) =
+        let (mut map, entities, mut viewshed, pos, player, mut hidden, mut rng, mut log, names) =
             data;
 
         for (ent, viewshed, pos) in (&entities, &mut viewshed, &pos).join() {
@@ -46,22 +46,22 @@ impl<'a> System<'a> for VisibilitySystem {
                         map.revealed_tiles[idx] = true;
                         map.visible_tiles[idx] = true;
 
-                        // // Possibly reveal hidden things 
-                        // for e in map.tile_content[idx].iter() {
-                        //     let maybe_hidden = hidden.get(*e);
-                        //     if let Some(_maybe_hidden)= maybe_hidden {
-                        //         if rng.roll_dice(1, 24) == 1 {
-                        //             let name = names.get(*e);
-                        //             if let Some(name) = name {
-                        //                 log.entries.insert(
-                        //                     0,
-                        //                     format!("You spotted a {}.", &name.name)
-                        //                 );
-                        //             }
-                        //             hidden.remove(*e);
-                        //         }
-                        //     }
-                        // }
+                        // Possibly reveal hidden things 
+                        for e in map.tile_content[idx].iter() {
+                            let maybe_hidden = hidden.get(*e);
+                            if let Some(_maybe_hidden)= maybe_hidden {
+                                if rng.roll_dice(1, 24) == 1 {
+                                    let name = names.get(*e);
+                                    if let Some(name) = name {
+                                        log.entries.insert(
+                                            0,
+                                            format!("You spotted a {}.", &name.name)
+                                        );
+                                    }
+                                    hidden.remove(*e);
+                                }
+                            }
+                        }
                     }
                 }
             }
