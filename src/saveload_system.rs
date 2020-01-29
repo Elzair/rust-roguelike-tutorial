@@ -1,7 +1,8 @@
-use specs::prelude::*;
-use specs::saveload::{DeserializeComponents, MarkedBuilder, SerializeComponents, 
-    SimpleMarker, SimpleMarkerAllocator};
 use specs::error::NoError;
+use specs::prelude::*;
+use specs::saveload::{
+    DeserializeComponents, MarkedBuilder, SerializeComponents, SimpleMarker, SimpleMarkerAllocator,
+};
 use std::fs::File;
 use std::path::Path;
 
@@ -27,20 +28,48 @@ pub fn save_game(ecs: &mut World) {
     let mapcopy = ecs.get_mut::<Map>().unwrap().clone();
     let savehelper = ecs
         .create_entity()
-        .with(SerializationHelper{ map: mapcopy })
+        .with(SerializationHelper { map: mapcopy })
         .marked::<SimpleMarker<SerializeMe>>()
         .build();
-    
     // Actually serialize
     {
-        let data = ( ecs.entities(), ecs.read_storage::<SimpleMarker<SerializeMe>>() );
+        let data = (
+            ecs.entities(),
+            ecs.read_storage::<SimpleMarker<SerializeMe>>(),
+        );
 
         let writer = File::create("./savegame.json").unwrap();
         let mut serializer = serde_json::Serializer::new(writer);
-        serialize_individually!(ecs, serializer, data, Position, Renderable, Player, Viewshed, Monster, 
-            Name, BlocksTile, CombatStats, SufferDamage, WantsToMelee, Item, Consumable, Ranged, InflictsDamage, 
-            AreaOfEffect, Confusion, ProvidesHealing, InBackpack, WantsToPickupItem, WantsToUseItem,
-            WantsToDropItem, SerializationHelper, Equippable, ParticleLifetime
+        serialize_individually!(
+            ecs,
+            serializer,
+            data,
+            Position,
+            Renderable,
+            Player,
+            Viewshed,
+            Monster,
+            Name,
+            BlocksTile,
+            CombatStats,
+            SufferDamage,
+            WantsToMelee,
+            Item,
+            Consumable,
+            Ranged,
+            InflictsDamage,
+            AreaOfEffect,
+            Confusion,
+            ProvidesHealing,
+            InBackpack,
+            WantsToPickupItem,
+            WantsToUseItem,
+            WantsToDropItem,
+            SerializationHelper,
+            Equippable,
+            ParticleLifetime,
+            HungerClock,
+            ProvidesFood
         );
     }
 
@@ -50,8 +79,7 @@ pub fn save_game(ecs: &mut World) {
 
 // This is needed until WASM save support is implemented in RLTK.
 #[cfg(target_arch = "wasm32")]
-pub fn save_game(_ecs : &mut World) {
-}
+pub fn save_game(_ecs: &mut World) {}
 
 macro_rules! deserialize_individually {
     ($ecs:expr, $de:expr, $data:expr, $( $type:ty),*) => {
@@ -84,35 +112,66 @@ pub fn load_game(ecs: &mut World) {
     let mut de = serde_json::Deserializer::from_str(&data);
 
     {
-        let mut d = (&mut ecs.entities(), &mut ecs.write_storage::<SimpleMarker<SerializeMe>>(), &mut ecs.write_resource::<SimpleMarkerAllocator<SerializeMe>>());
+        let mut d = (
+            &mut ecs.entities(),
+            &mut ecs.write_storage::<SimpleMarker<SerializeMe>>(),
+            &mut ecs.write_resource::<SimpleMarkerAllocator<SerializeMe>>(),
+        );
 
-        deserialize_individually!(ecs, de, d, Position, Renderable, Player, Viewshed, Monster, 
-            Name, BlocksTile, CombatStats, SufferDamage, WantsToMelee, Item, Consumable, Ranged, InflictsDamage, 
-            AreaOfEffect, Confusion, ProvidesHealing, InBackpack, WantsToPickupItem, WantsToUseItem,
-            WantsToDropItem, SerializationHelper, Equippable, ParticleLifetime
+        deserialize_individually!(
+            ecs,
+            de,
+            d,
+            Position,
+            Renderable,
+            Player,
+            Viewshed,
+            Monster,
+            Name,
+            BlocksTile,
+            CombatStats,
+            SufferDamage,
+            WantsToMelee,
+            Item,
+            Consumable,
+            Ranged,
+            InflictsDamage,
+            AreaOfEffect,
+            Confusion,
+            ProvidesHealing,
+            InBackpack,
+            WantsToPickupItem,
+            WantsToUseItem,
+            WantsToDropItem,
+            SerializationHelper,
+            Equippable,
+            ParticleLifetime,
+            HungerClock,
+            ProvidesFood
         );
     }
 
-    let mut deleteme : Option<Entity> = None;
+    let mut deleteme: Option<Entity> = None;
     {
         let entities = ecs.entities();
         let helper = ecs.read_storage::<SerializationHelper>();
         let player = ecs.read_storage::<Player>();
         let position = ecs.read_storage::<Position>();
-        for (e,h) in (&entities, &helper).join() {
+        for (e, h) in (&entities, &helper).join() {
             let mut worldmap = ecs.write_resource::<super::map::Map>();
             *worldmap = h.map.clone();
             worldmap.tile_content = vec![Vec::new(); super::map::MAPCOUNT];
             deleteme = Some(e);
         }
-        for (e,_p,pos) in (&entities, &player, &position).join() {
+        for (e, _p, pos) in (&entities, &player, &position).join() {
             let mut ppos = ecs.write_resource::<rltk::Point>();
             *ppos = rltk::Point::new(pos.x, pos.y);
             let mut player_resource = ecs.write_resource::<Entity>();
             *player_resource = e;
         }
     }
-    ecs.delete_entity(deleteme.unwrap()).expect("Unable to delete helper");
+    ecs.delete_entity(deleteme.unwrap())
+        .expect("Unable to delete helper");
 }
 
 pub fn does_save_exist() -> bool {
@@ -124,4 +183,3 @@ pub fn delete_save() {
         ::std::fs::remove_file("./savegame.json").expect("Unable to delete file");
     }
 }
-

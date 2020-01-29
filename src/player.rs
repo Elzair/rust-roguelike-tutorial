@@ -1,5 +1,7 @@
-use super::components::{CombatStats, Item, Monster, Player, Position, Viewshed, 
-    WantsToPickupItem, WantsToMelee};
+use super::components::{
+    CombatStats, HungerClock, HungerState, Item, Monster, Player, Position, Viewshed, WantsToMelee,
+    WantsToPickupItem,
+};
 use super::gamelog::GameLog;
 use super::map::{Map, TileType};
 use super::{RunState, State};
@@ -24,7 +26,14 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
             for potential_target in map.tile_content[destination_idx].iter() {
                 let target = combat_stats.get(*potential_target);
                 if let Some(_target) = target {
-                    wants_to_melee.insert(entity, WantsToMelee{ target: *potential_target }).expect("Add target failed");
+                    wants_to_melee
+                        .insert(
+                            entity,
+                            WantsToMelee {
+                                target: *potential_target,
+                            },
+                        )
+                        .expect("Add target failed");
                 }
             }
 
@@ -79,7 +88,6 @@ pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState {
             }
             VirtualKeyCode::Numpad5 => return skip_turn(&mut gs.ecs),
             VirtualKeyCode::Space => return skip_turn(&mut gs.ecs),
-            
             // Metagame Actions
             VirtualKeyCode::Escape => return RunState::SaveGame,
 
@@ -97,7 +105,9 @@ pub fn try_next_level(ecs: &mut World) -> bool {
         true
     } else {
         let mut gamelog = ecs.fetch_mut::<GameLog>();
-        gamelog.entries.insert(0, "There is no way to go down from here.".to_string());
+        gamelog
+            .entries
+            .insert(0, "There is no way to go down from here.".to_string());
         false
     }
 }
@@ -106,11 +116,20 @@ fn skip_turn(ecs: &mut World) -> RunState {
     let player_entity = ecs.fetch::<Entity>();
     let viewshed_components = ecs.read_storage::<Viewshed>();
     let monsters = ecs.read_storage::<Monster>();
+    let hunger_clocks = ecs.read_storage::<HungerClock>();
 
     let worldmap_resource = ecs.fetch::<Map>();
 
-    // Heal player if no monsters are around.
+    // Heal player if no monsters are around and the player is not hungry or starving.
     let mut can_heal = true;
+    let hc = hunger_clocks.get(*player_entity);
+    if let Some(hc) = hc {
+        match hc.state {
+            HungerState::Hungry => can_heal = false,
+            HungerState::Starving => can_heal = false,
+            _ => {}
+        }
+    }
     let viewshed = viewshed_components.get(*player_entity).unwrap();
     for tile in viewshed.visible_tiles.iter() {
         let idx = worldmap_resource.xy_idx(tile.x, tile.y).unwrap();
@@ -118,7 +137,9 @@ fn skip_turn(ecs: &mut World) -> RunState {
             let mob = monsters.get(*entity_id);
             match mob {
                 None => {}
-                Some(_) => { can_heal = false; }
+                Some(_) => {
+                    can_heal = false;
+                }
             }
         }
     }
@@ -148,10 +169,20 @@ fn get_item(ecs: &mut World) {
     }
 
     match target_item {
-        None => gamelog.entries.insert(0, "There is nothing here to pick up.".to_string()),
+        None => gamelog
+            .entries
+            .insert(0, "There is nothing here to pick up.".to_string()),
         Some(item) => {
             let mut pickup = ecs.write_storage::<WantsToPickupItem>();
-            pickup.insert(*player_entity, WantsToPickupItem{ collected_by: *player_entity, item }).expect("Unable to insert want to pickup");
+            pickup
+                .insert(
+                    *player_entity,
+                    WantsToPickupItem {
+                        collected_by: *player_entity,
+                        item,
+                    },
+                )
+                .expect("Unable to insert want to pickup");
         }
     }
 }

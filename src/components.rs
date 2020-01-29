@@ -47,6 +47,20 @@ pub struct Equipped {
     pub slot: EquipmentSlot,
 }
 
+#[derive(Clone, Component, Deserialize, Serialize)]
+pub struct HungerClock {
+    pub state: HungerState,
+    pub duration: i32,
+}
+
+#[derive(Clone, Copy, Deserialize, PartialEq, Serialize)]
+pub enum HungerState {
+    Hungry,
+    Normal,
+    Starving,
+    WellFed,
+}
+
 #[derive(Clone, Component, ConvertSaveload, Debug)]
 pub struct InBackpack {
     pub owner: Entity,
@@ -86,6 +100,9 @@ pub struct Position {
 pub struct ProvidesHealing {
     pub heal_amount: i32,
 }
+
+#[derive(Clone, Component, Debug, Deserialize, Serialize)]
+pub struct ProvidesFood {}
 
 #[derive(Clone, Component, ConvertSaveload, Debug)]
 pub struct Ranged {

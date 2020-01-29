@@ -8,15 +8,17 @@ extern crate specs_derive;
 mod components;
 pub use components::{
     AreaOfEffect, BlocksTile, CombatStats, Confusion, Consumable, DefenseBonus, Equippable,
-    Equipped, InBackpack, InflictsDamage, Item, MeleePowerBonus, Monster, Name, ParticleLifetime, 
-    Player, Position, ProvidesHealing, Ranged, Renderable, SerializationHelper, SerializeMe, 
-    SufferDamage, Viewshed, WantsToDropItem, WantsToMelee, WantsToPickupItem, WantsToRemoveItem, 
-    WantsToUseItem,
+    Equipped, HungerClock, HungerState, InBackpack, InflictsDamage, Item, MeleePowerBonus, Monster,
+    Name, ParticleLifetime, Player, Position, ProvidesFood, ProvidesHealing, Ranged, Renderable,
+    SerializationHelper, SerializeMe, SufferDamage, Viewshed, WantsToDropItem, WantsToMelee,
+    WantsToPickupItem, WantsToRemoveItem, WantsToUseItem,
 };
 mod damage_system;
 pub use damage_system::DamageSystem;
 mod gamelog;
 mod gui;
+mod hunger_system;
+pub use hunger_system::HungerSystem;
 mod inventory_system;
 pub use inventory_system::{ItemCollectionSystem, ItemDropSystem, ItemRemoveSystem, ItemUseSystem};
 mod map;
@@ -84,6 +86,8 @@ impl State {
         drop_items.run_now(&self.ecs);
         let mut item_remove = ItemRemoveSystem {};
         item_remove.run_now(&self.ecs);
+        let mut hunger = hunger_system::HungerSystem {};
+        hunger.run_now(&self.ecs);
         let mut particles = ParticleSpawnSystem {};
         particles.run_now(&self.ecs);
 
@@ -456,6 +460,8 @@ fn main() {
     gs.ecs.register::<MeleePowerBonus>();
     gs.ecs.register::<WantsToRemoveItem>();
     gs.ecs.register::<ParticleLifetime>();
+    gs.ecs.register::<HungerClock>();
+    gs.ecs.register::<ProvidesFood>();
 
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
 

@@ -1,8 +1,7 @@
 use super::components::{
-    AreaOfEffect, CombatStats, Confusion, Consumable, Equippable, Equipped,
-    InBackpack, InflictsDamage, Name, Position,
-    ProvidesHealing, SufferDamage, WantsToDropItem, WantsToPickupItem, 
-    WantsToRemoveItem, WantsToUseItem,
+    AreaOfEffect, CombatStats, Confusion, Consumable, Equippable, Equipped, HungerClock,
+    HungerState, InBackpack, InflictsDamage, Name, Position, ProvidesFood, ProvidesHealing,
+    SufferDamage, WantsToDropItem, WantsToPickupItem, WantsToRemoveItem, WantsToUseItem,
 };
 use super::gamelog::GameLog;
 use super::map::Map;
@@ -72,6 +71,8 @@ impl<'a> System<'a> for ItemUseSystem {
         WriteStorage<'a, InBackpack>,
         WriteExpect<'a, ParticleBuilder>,
         ReadStorage<'a, Position>,
+        ReadStorage<'a, ProvidesFood>,
+        WriteStorage<'a, HungerClock>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
@@ -93,7 +94,9 @@ impl<'a> System<'a> for ItemUseSystem {
             mut equipped,
             mut backpack,
             mut particle_builder,
-            positions
+            positions,
+            provides_food,
+            mut hunger_clock,
         ) = data;
 
         for (entity, useitem) in (&entities, &wants_use).join() {
@@ -132,8 +135,8 @@ impl<'a> System<'a> for ItemUseSystem {
                                     tile_idx.y,
                                     rltk::RGB::named(rltk::ORANGE),
                                     rltk::RGB::named(rltk::BLACK),
-                                    rltk::to_cp437('░'), 
-                                    200.0
+                                    rltk::to_cp437('░'),
+                                    200.0,
                                 );
                             }
                         }
@@ -151,24 +154,63 @@ impl<'a> System<'a> for ItemUseSystem {
 
                     // Remove any items target has in the item's slot
                     let mut to_unequip: Vec<Entity> = Vec::new();
-                    for (item_entity, already_equipped, name) in (&entities, &equipped, &names).join() {
-                        if already_equipped.owner == target && already_equipped.slot == target_slot {
+                    for (item_entity, already_equipped, name) in
+                        (&entities, &equipped, &names).join()
+                    {
+                        if already_equipped.owner == target && already_equipped.slot == target_slot
+                        {
                             to_unequip.push(item_entity);
                             if target == *player_entity {
-                                gamelog.entries.insert(0, format!("You unequip {}.", name.name));
+                                gamelog
+                                    .entries
+                                    .insert(0, format!("You unequip {}.", name.name));
                             }
                         }
                     }
                     for item in to_unequip.iter() {
                         equipped.remove(*item);
-                        backpack.insert(*item, InBackpack{ owner: target }).expect("Unable to insert item in backpack");
+                        backpack
+                            .insert(*item, InBackpack { owner: target })
+                            .expect("Unable to insert item in backpack");
                     }
 
                     // Wield the item
-                    equipped.insert(useitem.item, Equipped{ owner: target, slot: target_slot }).expect("Unable to insert equipped component");
+                    equipped
+                        .insert(
+                            useitem.item,
+                            Equipped {
+                                owner: target,
+                                slot: target_slot,
+                            },
+                        )
+                        .expect("Unable to insert equipped component");
                     backpack.remove(useitem.item);
                     if target == *player_entity {
-                        gamelog.entries.insert(0, format!("You equip {}.", names.get(useitem.item).unwrap().name));
+                        gamelog.entries.insert(
+                            0,
+                            format!("You equip {}.", names.get(useitem.item).unwrap().name),
+                        );
+                    }
+                }
+            }
+
+            // If it is edible, eat it.
+            let item_edible = provides_food.get(useitem.item);
+            match item_edible {
+                None => {}
+                Some(_) => {
+                    used_item = true;
+                    let target = targets[0];
+                    let hc = hunger_clock.get_mut(target);
+                    if let Some(hc) = hc {
+                        hc.state = HungerState::WellFed;
+                        hc.duration = 20;
+                        if target == *player_entity {
+                            gamelog.entries.insert(
+                                0,
+                                format!("You eat the {}.", names.get(useitem.item).unwrap().name),
+                            );
+                        }
                     }
                 }
             }
@@ -202,7 +244,7 @@ impl<'a> System<'a> for ItemUseSystem {
                                     rltk::RGB::named(rltk::GREEN),
                                     rltk::RGB::named(rltk::BLACK),
                                     rltk::to_cp437('♥'),
-                                    200.0
+                                    200.0,
                                 );
                             }
                         }
@@ -245,7 +287,7 @@ impl<'a> System<'a> for ItemUseSystem {
                                 rltk::RGB::named(rltk::RED),
                                 rltk::RGB::named(rltk::BLACK),
                                 rltk::to_cp437('‼'),
-                                200.0
+                                200.0,
                             );
                         }
 
@@ -284,7 +326,7 @@ impl<'a> System<'a> for ItemUseSystem {
                                     rltk::RGB::named(rltk::MAGENTA),
                                     rltk::RGB::named(rltk::BLACK),
                                     rltk::to_cp437('?'),
-                                    200.0
+                                    200.0,
                                 );
                             }
                         }
@@ -372,18 +414,21 @@ pub struct ItemRemoveSystem {}
 
 impl<'a> System<'a> for ItemRemoveSystem {
     #[allow(clippy::type_complexity)]
-    type SystemData = ( Entities<'a>,
-                        WriteStorage<'a, WantsToRemoveItem>,
-                        WriteStorage<'a, Equipped>,
-                        WriteStorage<'a, InBackpack>
-                    );
+    type SystemData = (
+        Entities<'a>,
+        WriteStorage<'a, WantsToRemoveItem>,
+        WriteStorage<'a, Equipped>,
+        WriteStorage<'a, InBackpack>,
+    );
 
     fn run(&mut self, data: Self::SystemData) {
         let (entities, mut wants_remove, mut equipped, mut backpack) = data;
 
         for (entity, to_remove) in (&entities, &wants_remove).join() {
             equipped.remove(to_remove.item);
-            backpack.insert(to_remove.item, InBackpack{ owner: entity }).expect("Unable to insert backpack");
+            backpack
+                .insert(to_remove.item, InBackpack { owner: entity })
+                .expect("Unable to insert backpack");
         }
 
         wants_remove.clear();
