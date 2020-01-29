@@ -69,6 +69,11 @@ pub struct Name {
 }
 
 #[derive(Clone, Component, Deserialize, Serialize)]
+pub struct ParticleLifetime {
+    pub lifetime_ms: f32,
+}
+
+#[derive(Clone, Component, Deserialize, Serialize)]
 pub struct Player {}
 
 #[derive(Clone, Component, ConvertSaveload)]

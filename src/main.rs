@@ -8,9 +8,10 @@ extern crate specs_derive;
 mod components;
 pub use components::{
     AreaOfEffect, BlocksTile, CombatStats, Confusion, Consumable, DefenseBonus, Equippable,
-    Equipped, InBackpack, InflictsDamage, Item, MeleePowerBonus, Monster, Name, Player, Position,
-    ProvidesHealing, Ranged, Renderable, SerializationHelper, SerializeMe, SufferDamage, Viewshed,
-    WantsToDropItem, WantsToMelee, WantsToPickupItem, WantsToRemoveItem, WantsToUseItem,
+    Equipped, InBackpack, InflictsDamage, Item, MeleePowerBonus, Monster, Name, ParticleLifetime, 
+    Player, Position, ProvidesHealing, Ranged, Renderable, SerializationHelper, SerializeMe, 
+    SufferDamage, Viewshed, WantsToDropItem, WantsToMelee, WantsToPickupItem, WantsToRemoveItem, 
+    WantsToUseItem,
 };
 mod damage_system;
 pub use damage_system::DamageSystem;
@@ -26,6 +27,8 @@ mod melee_combat_system;
 pub use melee_combat_system::MeleeCombatSystem;
 mod monster_ai_system;
 pub use monster_ai_system::MonsterAI;
+mod particle_system;
+pub use particle_system::ParticleSpawnSystem;
 mod player;
 pub use player::*;
 mod random_table;
@@ -81,6 +84,8 @@ impl State {
         drop_items.run_now(&self.ecs);
         let mut item_remove = ItemRemoveSystem {};
         item_remove.run_now(&self.ecs);
+        let mut particles = ParticleSpawnSystem {};
+        particles.run_now(&self.ecs);
 
         self.ecs.maintain();
     }
@@ -233,6 +238,7 @@ impl GameState for State {
         }
 
         ctx.cls();
+        particle_system::cull_dead_particles(&mut self.ecs, ctx);
 
         match newrunstate {
             RunState::MainMenu { .. } => {}
@@ -449,6 +455,7 @@ fn main() {
     gs.ecs.register::<DefenseBonus>();
     gs.ecs.register::<MeleePowerBonus>();
     gs.ecs.register::<WantsToRemoveItem>();
+    gs.ecs.register::<ParticleLifetime>();
 
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
 
@@ -472,6 +479,7 @@ fn main() {
     gs.ecs.insert(gamelog::GameLog {
         entries: vec!["Welcome to Rusty Roguelike".to_string()],
     });
+    gs.ecs.insert(particle_system::ParticleBuilder::new());
 
     rltk::main_loop(context, gs);
 }

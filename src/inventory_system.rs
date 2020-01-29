@@ -6,6 +6,7 @@ use super::components::{
 };
 use super::gamelog::GameLog;
 use super::map::Map;
+use super::particle_system::ParticleBuilder;
 use specs::prelude::*;
 
 pub struct ItemCollectionSystem {}
@@ -69,6 +70,8 @@ impl<'a> System<'a> for ItemUseSystem {
         ReadStorage<'a, Equippable>,
         WriteStorage<'a, Equipped>,
         WriteStorage<'a, InBackpack>,
+        WriteExpect<'a, ParticleBuilder>,
+        ReadStorage<'a, Position>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
@@ -88,7 +91,9 @@ impl<'a> System<'a> for ItemUseSystem {
             mut confused,
             equippable,
             mut equipped,
-            mut backpack
+            mut backpack,
+            mut particle_builder,
+            positions
         ) = data;
 
         for (entity, useitem) in (&entities, &wants_use).join() {
@@ -122,6 +127,14 @@ impl<'a> System<'a> for ItemUseSystem {
                                 for mob in map.tile_content[idx].iter() {
                                     targets.push(*mob);
                                 }
+                                particle_builder.request(
+                                    tile_idx.x,
+                                    tile_idx.y,
+                                    rltk::RGB::named(rltk::ORANGE),
+                                    rltk::RGB::named(rltk::BLACK),
+                                    rltk::to_cp437('░'), 
+                                    200.0
+                                );
                             }
                         }
                     }
@@ -174,10 +187,22 @@ impl<'a> System<'a> for ItemUseSystem {
                                 gamelog.entries.insert(
                                     0,
                                     format!(
-                                        "You drink the {}, healing {} hp.",
+                                        "You use the {}, healing {} hp.",
                                         names.get(useitem.item).unwrap().name,
                                         healer.heal_amount
                                     ),
+                                );
+                            }
+
+                            let pos = positions.get(*target);
+                            if let Some(pos) = pos {
+                                particle_builder.request(
+                                    pos.x,
+                                    pos.y,
+                                    rltk::RGB::named(rltk::GREEN),
+                                    rltk::RGB::named(rltk::BLACK),
+                                    rltk::to_cp437('♥'),
+                                    200.0
                                 );
                             }
                         }
@@ -212,6 +237,18 @@ impl<'a> System<'a> for ItemUseSystem {
                             );
                         }
 
+                        let pos = positions.get(*mob);
+                        if let Some(pos) = pos {
+                            particle_builder.request(
+                                pos.x,
+                                pos.y,
+                                rltk::RGB::named(rltk::RED),
+                                rltk::RGB::named(rltk::BLACK),
+                                rltk::to_cp437('‼'),
+                                200.0
+                            );
+                        }
+
                         used_item = true;
                     }
                 }
@@ -236,6 +273,18 @@ impl<'a> System<'a> for ItemUseSystem {
                                         "You use {} on {}, confusing them.",
                                         item_name.name, mob_name.name
                                     ),
+                                );
+                            }
+
+                            let pos = positions.get(*mob);
+                            if let Some(pos) = pos {
+                                particle_builder.request(
+                                    pos.x,
+                                    pos.y,
+                                    rltk::RGB::named(rltk::MAGENTA),
+                                    rltk::RGB::named(rltk::BLACK),
+                                    rltk::to_cp437('?'),
+                                    200.0
                                 );
                             }
                         }
