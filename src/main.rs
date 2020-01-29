@@ -36,6 +36,7 @@ pub use player::*;
 mod random_table;
 mod rect;
 pub use rect::*;
+mod rex_assets;
 mod saveload_system;
 mod spawner;
 mod visibility_system;
@@ -500,6 +501,7 @@ fn main() {
         spawner::spawn_room(&mut gs.ecs, room, 1);
     }
 
+    gs.ecs.insert(rex_assets::RexAssets::new());
     gs.ecs.insert(map);
     gs.ecs.insert(Point::new(player_x, player_y));
     gs.ecs.insert(player_entity);
