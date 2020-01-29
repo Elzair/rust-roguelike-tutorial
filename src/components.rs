@@ -33,6 +33,12 @@ pub struct DefenseBonus {
     pub defense: i32, 
 }
 
+#[derive(Clone, Component, Debug, Deserialize, Serialize)]
+pub struct EntityMoved {}
+
+#[derive(Clone, Component, Debug, Deserialize, Serialize)]
+pub struct EntryTrigger {}
+
 #[derive(Clone, Copy, Deserialize, PartialEq, Serialize)]
 pub enum EquipmentSlot { Melee, Shield, }
 
@@ -46,6 +52,9 @@ pub struct Equipped {
     pub owner: Entity,
     pub slot: EquipmentSlot,
 }
+
+#[derive(Clone, Component, Debug, Deserialize, Serialize)]
+pub struct Hidden {}
 
 #[derive(Clone, Component, Deserialize, Serialize)]
 pub struct HungerClock {
@@ -119,6 +128,9 @@ pub struct Renderable {
     pub bg: RGB,
     pub render_order: i32,
 }
+
+#[derive(Clone, Component, Debug, Deserialize, Serialize)]
+pub struct SingleActivation {}
 
 #[derive(Clone, Component, ConvertSaveload, Debug)]
 pub struct SufferDamage {

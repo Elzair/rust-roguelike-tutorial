@@ -7,11 +7,12 @@ extern crate specs_derive;
 
 mod components;
 pub use components::{
-    AreaOfEffect, BlocksTile, CombatStats, Confusion, Consumable, DefenseBonus, Equippable,
-    Equipped, HungerClock, HungerState, InBackpack, InflictsDamage, Item, MagicMapper,
-    MeleePowerBonus, Monster, Name, ParticleLifetime, Player, Position, ProvidesFood,
-    ProvidesHealing, Ranged, Renderable, SerializationHelper, SerializeMe, SufferDamage, Viewshed,
-    WantsToDropItem, WantsToMelee, WantsToPickupItem, WantsToRemoveItem, WantsToUseItem,
+    AreaOfEffect, BlocksTile, CombatStats, Confusion, Consumable, DefenseBonus, EntityMoved,
+    EntryTrigger, Equippable, Equipped, Hidden, HungerClock, HungerState, InBackpack,
+    InflictsDamage, Item, MagicMapper, MeleePowerBonus, Monster, Name, ParticleLifetime, Player,
+    Position, ProvidesFood, ProvidesHealing, Ranged, Renderable, SerializationHelper, SerializeMe,
+    SingleActivation, SufferDamage, Viewshed, WantsToDropItem, WantsToMelee, WantsToPickupItem,
+    WantsToRemoveItem, WantsToUseItem,
 };
 mod damage_system;
 pub use damage_system::DamageSystem;
@@ -39,6 +40,8 @@ pub use rect::*;
 mod rex_assets;
 mod saveload_system;
 mod spawner;
+mod trigger_system;
+pub use trigger_system::TriggerSystem;
 mod visibility_system;
 pub use visibility_system::VisibilitySystem;
 
@@ -78,6 +81,8 @@ impl State {
         mob.run_now(&self.ecs);
         let mut mapindex = MapIndexingSystem {};
         mapindex.run_now(&self.ecs);
+        // let mut trigger = TriggerSystem {};
+        // trigger.run_now(&self.ecs);
         let mut melee = MeleeCombatSystem {};
         melee.run_now(&self.ecs);
         let mut damage = DamageSystem {};
@@ -90,7 +95,7 @@ impl State {
         drop_items.run_now(&self.ecs);
         let mut item_remove = ItemRemoveSystem {};
         item_remove.run_now(&self.ecs);
-        let mut hunger = hunger_system::HungerSystem {};
+        let mut hunger = HungerSystem {};
         hunger.run_now(&self.ecs);
         let mut particles = ParticleSpawnSystem {};
         particles.run_now(&self.ecs);
@@ -255,11 +260,14 @@ impl GameState for State {
                 {
                     let positions = self.ecs.read_storage::<Position>();
                     let renderables = self.ecs.read_storage::<Renderable>();
+                    let hidden = self.ecs.read_storage::<Hidden>();
                     let map = self.ecs.fetch::<Map>();
 
-                    let mut data = (&positions, &renderables).join().collect::<Vec<_>>();
+                    let mut data = (&positions, &renderables, !&hidden)
+                        .join()
+                        .collect::<Vec<_>>();
                     data.sort_by(|&a, &b| b.1.render_order.cmp(&a.1.render_order));
-                    for (pos, render) in data.iter() {
+                    for (pos, render, _hidden) in data.iter() {
                         let idx = map.xy_idx(pos.x, pos.y).unwrap();
                         if map.visible_tiles[idx] {
                             ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
@@ -487,6 +495,10 @@ fn main() {
     gs.ecs.register::<HungerClock>();
     gs.ecs.register::<ProvidesFood>();
     gs.ecs.register::<MagicMapper>();
+    gs.ecs.register::<Hidden>();
+    gs.ecs.register::<EntryTrigger>();
+    gs.ecs.register::<EntityMoved>();
+    gs.ecs.register::<SingleActivation>();
 
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
 
@@ -501,7 +513,6 @@ fn main() {
         spawner::spawn_room(&mut gs.ecs, room, 1);
     }
 
-    gs.ecs.insert(rex_assets::RexAssets::new());
     gs.ecs.insert(map);
     gs.ecs.insert(Point::new(player_x, player_y));
     gs.ecs.insert(player_entity);
@@ -512,6 +523,7 @@ fn main() {
         entries: vec!["Welcome to Rusty Roguelike".to_string()],
     });
     gs.ecs.insert(particle_system::ParticleBuilder::new());
+    gs.ecs.insert(rex_assets::RexAssets::new());
 
     rltk::main_loop(context, gs);
 }

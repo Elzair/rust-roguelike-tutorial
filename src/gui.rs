@@ -2,7 +2,8 @@ use rltk::{Console, Point, Rltk, VirtualKeyCode, RGB};
 use specs::prelude::*;
 
 use super::components::{
-    CombatStats, Equipped, HungerClock, HungerState, InBackpack, Name, Player, Position, Viewshed,
+    CombatStats, Equipped, Hidden, HungerClock, HungerState, InBackpack, Name, Player, Position,
+    Viewshed,
 };
 use super::gamelog::GameLog;
 use super::map::Map;
@@ -117,12 +118,7 @@ pub fn main_menu(gs: &mut State, ctx: &mut Rltk) -> MainMenuResult {
                 "Quit",
             );
         } else {
-            ctx.print_color_centered(
-                y, 
-                RGB::named(rltk::WHITE), 
-                RGB::named(rltk::BLACK), 
-                "Quit"
-            );
+            ctx.print_color_centered(y, RGB::named(rltk::WHITE), RGB::named(rltk::BLACK), "Quit");
         }
 
         match ctx.key {
@@ -633,13 +629,14 @@ fn draw_tooltips(ecs: &World, ctx: &mut Rltk) {
     let map = ecs.fetch::<Map>();
     let names = ecs.read_storage::<Name>();
     let positions = ecs.read_storage::<Position>();
+    let hidden = ecs.read_storage::<Hidden>();
 
     let mouse_pos = ctx.mouse_pos();
     if mouse_pos.0 >= map.width || mouse_pos.1 >= map.height {
         return;
     }
     let mut tooltip: Vec<String> = Vec::new();
-    for (name, position) in (&names, &positions).join() {
+    for (name, position, _hidden) in (&names, &positions, !&hidden).join() {
         if position.x == mouse_pos.0 && position.y == mouse_pos.1 {
             tooltip.push(name.name.to_string());
         }

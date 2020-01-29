@@ -1,6 +1,6 @@
 use super::components::{
-    CombatStats, HungerClock, HungerState, Item, Monster, Player, Position, Viewshed, WantsToMelee,
-    WantsToPickupItem,
+    CombatStats, EntityMoved, HungerClock, HungerState, Item, Monster, Player, Position, Viewshed,
+    WantsToMelee, WantsToPickupItem,
 };
 use super::gamelog::GameLog;
 use super::map::{Map, TileType};
@@ -16,6 +16,7 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
     let players = ecs.read_storage::<Player>();
     let combat_stats = ecs.read_storage::<CombatStats>();
     let mut wants_to_melee = ecs.write_storage::<WantsToMelee>();
+    let mut entity_moved = ecs.write_storage::<EntityMoved>();
     let map = ecs.fetch::<Map>();
 
     // TODO: Handle multiple player objects.
@@ -38,6 +39,7 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
             }
 
             if !map.blocked[destination_idx] {
+                entity_moved.insert(entity, EntityMoved{}).expect("Unable to insert EntityMoved marker");
                 pos.x = min(map.width - 1, max(0, pos.x + delta_x));
                 pos.y = min(map.height - 1, max(0, pos.y + delta_y));
 
