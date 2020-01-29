@@ -81,8 +81,8 @@ impl State {
         mob.run_now(&self.ecs);
         let mut mapindex = MapIndexingSystem {};
         mapindex.run_now(&self.ecs);
-        // let mut trigger = TriggerSystem {};
-        // trigger.run_now(&self.ecs);
+        let mut trigger = TriggerSystem {};
+        trigger.run_now(&self.ecs);
         let mut melee = MeleeCombatSystem {};
         melee.run_now(&self.ecs);
         let mut damage = DamageSystem {};

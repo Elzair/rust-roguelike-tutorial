@@ -75,6 +75,11 @@ pub struct InBackpack {
     pub owner: Entity,
 }
 
+#[derive(Clone, Component, ConvertSaveload, Debug)]
+pub struct InflictsDamage {
+    pub damage: i32,
+}
+
 #[derive(Clone, Component, Debug, Deserialize, Serialize)]
 pub struct Item {}
 
@@ -169,11 +174,6 @@ pub struct WantsToRemoveItem {
 pub struct WantsToUseItem {
     pub item: Entity,
     pub target: Option<rltk::Point>,
-}
-
-#[derive(Clone, Component, ConvertSaveload, Debug)]
-pub struct InflictsDamage {
-    pub damage: i32,
 }
 
 pub struct SerializeMe;

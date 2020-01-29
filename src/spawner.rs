@@ -7,7 +7,7 @@ use super::components::{
     AreaOfEffect, BlocksTile, CombatStats, Confusion, Consumable, DefenseBonus, EntryTrigger,
     EquipmentSlot, Equippable, Hidden, HungerClock, HungerState, InflictsDamage, Item, MagicMapper,
     MeleePowerBonus, Monster, Name, Player, Position, ProvidesFood, ProvidesHealing, Ranged,
-    Renderable, SerializeMe, Viewshed,
+    Renderable, SerializeMe, SingleActivation, Viewshed,
 };
 use super::map::MAPWIDTH;
 use super::random_table::RandomTable;
@@ -373,6 +373,7 @@ fn bear_trap(ecs: &mut World, x: i32, y: i32) {
         .with(Hidden {})
         .with(EntryTrigger {})
         .with(InflictsDamage { damage: 6 })
+        .with(SingleActivation {})
         .marked::<SimpleMarker<SerializeMe>>()
         .build();
 }

@@ -1,7 +1,8 @@
 use specs::prelude::*;
 
 use super::components::{
-    EntityMoved, EntryTrigger, Hidden, Name, Position, SingleActivation, SufferDamage,
+    EntityMoved, EntryTrigger, Hidden, InflictsDamage, Name, Position, SingleActivation,
+    SufferDamage,
 };
 use super::gamelog::GameLog;
 use super::map::Map;
@@ -20,7 +21,7 @@ impl<'a> System<'a> for TriggerSystem {
         ReadStorage<'a, Name>,
         Entities<'a>,
         WriteExpect<'a, GameLog>,
-        ReadStorage<'a, SufferDamage>,
+        ReadStorage<'a, InflictsDamage>,
         WriteExpect<'a, ParticleBuilder>,
         WriteStorage<'a, SufferDamage>,
         ReadStorage<'a, SingleActivation>,
@@ -38,8 +39,8 @@ impl<'a> System<'a> for TriggerSystem {
             mut log,
             inflicts_damage,
             mut particle_builder,
-            mut inflict_damage,
-            single_activation
+            mut suffer_damage,
+            single_activation,
         ) = data;
 
         // Iterate the entities that moved and their final position
@@ -75,16 +76,16 @@ impl<'a> System<'a> for TriggerSystem {
                                     rltk::to_cp437('‼'),
                                     200.0,
                                 );
-                                inflict_damage
+                                suffer_damage
                                     .insert(
                                         entity,
                                         SufferDamage {
-                                            amount: damage.amount,
+                                            amount: damage.damage,
                                         },
                                     )
                                     .expect("Unable to do damage");
-                                
-                                // If it is a single activation, remove it. 
+
+                                // If it is a single activation, remove it.
                                 let sa = single_activation.get(*entity_id);
                                 if let Some(_sa) = sa {
                                     remove_entities.push(*entity_id);
