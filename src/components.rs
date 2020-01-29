@@ -69,6 +69,9 @@ pub struct InBackpack {
 #[derive(Clone, Component, Debug, Deserialize, Serialize)]
 pub struct Item {}
 
+#[derive(Clone, Component, Debug, Deserialize, Serialize)]
+pub struct MagicMapper {}
+
 #[derive(Clone, Component, ConvertSaveload)]
 pub struct MeleePowerBonus {
     pub power: i32,

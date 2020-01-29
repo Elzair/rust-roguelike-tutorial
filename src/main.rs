@@ -8,10 +8,10 @@ extern crate specs_derive;
 mod components;
 pub use components::{
     AreaOfEffect, BlocksTile, CombatStats, Confusion, Consumable, DefenseBonus, Equippable,
-    Equipped, HungerClock, HungerState, InBackpack, InflictsDamage, Item, MeleePowerBonus, Monster,
-    Name, ParticleLifetime, Player, Position, ProvidesFood, ProvidesHealing, Ranged, Renderable,
-    SerializationHelper, SerializeMe, SufferDamage, Viewshed, WantsToDropItem, WantsToMelee,
-    WantsToPickupItem, WantsToRemoveItem, WantsToUseItem,
+    Equipped, HungerClock, HungerState, InBackpack, InflictsDamage, Item, MagicMapper,
+    MeleePowerBonus, Monster, Name, ParticleLifetime, Player, Position, ProvidesFood,
+    ProvidesHealing, Ranged, Renderable, SerializationHelper, SerializeMe, SufferDamage, Viewshed,
+    WantsToDropItem, WantsToMelee, WantsToPickupItem, WantsToRemoveItem, WantsToUseItem,
 };
 mod damage_system;
 pub use damage_system::DamageSystem;
@@ -45,6 +45,9 @@ pub use visibility_system::VisibilitySystem;
 pub enum RunState {
     AwaitingInput,
     GameOver,
+    MagicMapReveal {
+        row: i32,
+    },
     MainMenu {
         menu_selection: gui::MainMenuSelection,
     },
@@ -283,6 +286,21 @@ impl GameState for State {
                     }
                 }
             }
+            RunState::MagicMapReveal { row } => {
+                let mut map = self.ecs.fetch_mut::<Map>();
+                // let width = map.width;
+                // let height = map.height;
+
+                for x in 0..MAPWIDTH {
+                    let idx = map.xy_idx(x as i32, row).unwrap();
+                    map.revealed_tiles[idx] = true;
+                }
+                if row as usize == MAPHEIGHT - 1 {
+                    newrunstate = RunState::MonsterTurn;
+                } else {
+                    newrunstate = RunState::MagicMapReveal { row: row + 1 };
+                }
+            }
             RunState::MainMenu { .. } => {
                 use gui::MainMenuResult::*;
                 use gui::MainMenuSelection::*;
@@ -318,7 +336,12 @@ impl GameState for State {
             RunState::PlayerTurn => {
                 self.run_systems();
                 self.ecs.maintain();
-                newrunstate = RunState::MonsterTurn;
+                match *self.ecs.fetch::<RunState>() {
+                    RunState::MagicMapReveal { .. } => {
+                        newrunstate = RunState::MagicMapReveal { row: 0 }
+                    }
+                    _ => newrunstate = RunState::MonsterTurn,
+                }
             }
             RunState::PreRun => {
                 self.run_systems();
@@ -462,6 +485,7 @@ fn main() {
     gs.ecs.register::<ParticleLifetime>();
     gs.ecs.register::<HungerClock>();
     gs.ecs.register::<ProvidesFood>();
+    gs.ecs.register::<MagicMapper>();
 
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
 

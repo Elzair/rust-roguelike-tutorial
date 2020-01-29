@@ -1,12 +1,14 @@
+use specs::prelude::*;
+
+use super::RunState;
 use super::components::{
     AreaOfEffect, CombatStats, Confusion, Consumable, Equippable, Equipped, HungerClock,
-    HungerState, InBackpack, InflictsDamage, Name, Position, ProvidesFood, ProvidesHealing,
+    HungerState, InBackpack, InflictsDamage, MagicMapper, Name, Position, ProvidesFood, ProvidesHealing,
     SufferDamage, WantsToDropItem, WantsToPickupItem, WantsToRemoveItem, WantsToUseItem,
 };
 use super::gamelog::GameLog;
 use super::map::Map;
 use super::particle_system::ParticleBuilder;
-use specs::prelude::*;
 
 pub struct ItemCollectionSystem {}
 
@@ -73,6 +75,8 @@ impl<'a> System<'a> for ItemUseSystem {
         ReadStorage<'a, Position>,
         ReadStorage<'a, ProvidesFood>,
         WriteStorage<'a, HungerClock>,
+        ReadStorage<'a, MagicMapper>,
+        WriteExpect<'a, RunState>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
@@ -97,6 +101,8 @@ impl<'a> System<'a> for ItemUseSystem {
             positions,
             provides_food,
             mut hunger_clock,
+            magic_mapper,
+            mut runstate
         ) = data;
 
         for (entity, useitem) in (&entities, &wants_use).join() {
@@ -212,6 +218,17 @@ impl<'a> System<'a> for ItemUseSystem {
                             );
                         }
                     }
+                }
+            }
+
+            // Map level if it is a magic mapper. 
+            let is_mapper = magic_mapper.get(useitem.item);
+            match is_mapper {
+                None => {}
+                Some(_) => {
+                    used_item = true;
+                    gamelog.entries.insert(0, "The map is revealed to you!".to_string());
+                    *runstate = RunState::MagicMapReveal { row: 0 };
                 }
             }
 
