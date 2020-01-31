@@ -24,6 +24,7 @@ mod inventory_system;
 pub use inventory_system::{ItemCollectionSystem, ItemDropSystem, ItemRemoveSystem, ItemUseSystem};
 mod map;
 pub use map::*;
+pub mod map_builders;
 mod map_indexing_system;
 pub use map_indexing_system::MapIndexingSystem;
 mod melee_combat_system;
@@ -116,7 +117,7 @@ impl State {
         let (worldmap, new_depth) = {
             let mut worldmap_resource = self.ecs.write_resource::<Map>();
             let current_depth = worldmap_resource.depth;
-            *worldmap_resource = Map::new_map_rooms_and_corridors(current_depth + 1);
+            *worldmap_resource = map_builders::build_random_map(current_depth + 1);
             (worldmap_resource.clone(), current_depth + 1)
         };
 
@@ -210,7 +211,7 @@ impl State {
         let worldmap;
         {
             let mut worldmap_resource = self.ecs.write_resource::<Map>();
-            *worldmap_resource = Map::new_map_rooms_and_corridors(1);
+            *worldmap_resource = map_builders::build_random_map(1);
             worldmap = worldmap_resource.clone();
         }
 
@@ -502,7 +503,7 @@ fn main() {
 
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
 
-    let map = Map::new_map_rooms_and_corridors(1);
+    let map = map_builders::build_random_map(1);
     let (player_x, player_y) = map.rooms[0].center();
 
     let player_entity = spawner::player(&mut gs.ecs, player_x, player_y);
