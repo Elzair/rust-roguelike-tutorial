@@ -1,9 +1,9 @@
-use super::rect::Rect;
-use rltk::{Algorithm2D, BaseMap, Console, Point, RandomNumberGenerator, Rltk, RGB};
+use rltk::{Algorithm2D, BaseMap, Console, Point, Rltk, RGB};
 use serde::{Deserialize, Serialize};
 use specs::prelude::*;
-use std::cmp::{max, min};
 use std::collections::HashSet;
+
+use super::rect::Rect;
 
 pub const MAPWIDTH: usize = 80;
 pub const MAPHEIGHT: usize = 43;
