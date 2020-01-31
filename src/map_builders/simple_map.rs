@@ -1,11 +1,12 @@
 use rltk::RandomNumberGenerator;
-// use specs::prelude::*;
+use specs::prelude::*;
 
 use super::common::*;
 use super::super::components::Position;
 use super::super::map::{ Map, TileType };
 use super::MapBuilder;
 use super::super::rect::Rect;
+use super::super::spawner;
 
 pub struct SimpleMapBuilder {}
 
@@ -64,5 +65,11 @@ impl MapBuilder for SimpleMapBuilder {
         let mut map = Map::new(new_depth);
         let pos = SimpleMapBuilder::rooms_and_corridors(&mut map);
         (map, pos)
+    }
+
+    fn spawn(map: &mut Map, ecs: &mut World, new_depth: i32) {
+        for room in map.rooms.iter().skip(1) {
+            spawner::spawn_room(ecs, room, new_depth);
+        }
     }
 }

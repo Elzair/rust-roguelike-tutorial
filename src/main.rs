@@ -114,7 +114,7 @@ impl State {
         }
 
         // Build a new map and place the player
-        let (worldmap, new_depth, player_start) = {
+        let (mut worldmap, new_depth, player_start) = {
             let mut worldmap_resource = self.ecs.write_resource::<Map>();
             let current_depth = worldmap_resource.depth;
             let (newmap, start) = map_builders::build_random_map(current_depth + 1);
@@ -123,9 +123,7 @@ impl State {
         };
 
         // Spawn bad guys
-        for room in worldmap.rooms.iter().skip(1) {
-            spawner::spawn_room(&mut self.ecs, room, new_depth);
-        }
+        map_builders::spawn(&mut worldmap, &mut self.ecs, new_depth);
 
         // Place the player and update resources
         let (player_x, player_y) = (player_start.x, player_start.y);
@@ -209,7 +207,7 @@ impl State {
         }
 
         // Build a new map and place the player
-        let (worldmap, player_start) = {
+        let (mut worldmap, player_start) = {
             let mut worldmap_resource = self.ecs.write_resource::<Map>();
             let (newmap, start) = map_builders::build_random_map(1);
             *worldmap_resource = newmap;
@@ -217,9 +215,7 @@ impl State {
         };
 
         // Spawn bad guys
-        for room in worldmap.rooms.iter().skip(1) {
-            spawner::spawn_room(&mut self.ecs, room, 1);
-        }
+        map_builders::spawn(&mut worldmap, &mut self.ecs, 1);
 
         // Place the player and update resources
         let (player_x, player_y) = (player_start.x, player_start.y);
@@ -504,16 +500,14 @@ fn main() {
 
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
 
-    let (map, player_start) = map_builders::build_random_map(1);
+    let (mut map, player_start) = map_builders::build_random_map(1);
     let (player_x, player_y) = (player_start.x, player_start.y);
 
     let player_entity = spawner::player(&mut gs.ecs, player_x, player_y);
 
     // Populate rooms with monsters
     gs.ecs.insert(rltk::RandomNumberGenerator::new());
-    for room in map.rooms.iter().skip(1) {
-        spawner::spawn_room(&mut gs.ecs, room, 1);
-    }
+    map_builders::spawn(&mut map, &mut gs.ecs, 1);
 
     gs.ecs.insert(map);
     gs.ecs.insert(Point::new(player_x, player_y));
