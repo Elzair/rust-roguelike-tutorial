@@ -3,8 +3,6 @@ use serde::{Deserialize, Serialize};
 use specs::prelude::*;
 use std::collections::HashSet;
 
-use super::rect::Rect;
-
 pub const MAPWIDTH: usize = 80;
 pub const MAPHEIGHT: usize = 43;
 pub const MAPCOUNT: usize = MAPHEIGHT * MAPWIDTH;
@@ -19,7 +17,6 @@ pub enum TileType {
 #[derive(Clone, Default, Deserialize, Serialize)]
 pub struct Map {
     pub tiles: Vec<TileType>,
-    pub rooms: Vec<Rect>,
     pub width: i32,
     pub height: i32,
     pub revealed_tiles: Vec<bool>,
@@ -37,7 +34,6 @@ impl Map {
     pub fn new(new_depth: i32) -> Map {
         Map {
             tiles: vec![TileType::Wall; MAPCOUNT],
-            rooms: Vec::new(),
             width: MAPWIDTH as i32,
             height: MAPHEIGHT as i32,
             revealed_tiles: vec![false; MAPCOUNT],

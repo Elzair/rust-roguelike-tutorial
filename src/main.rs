@@ -114,14 +114,14 @@ impl State {
         }
 
         // Build a new map and place the player
-        let (mut builder, mut worldmap, player_start) = {
+        let (mut builder, player_start) = {
             let mut worldmap_resource = self.ecs.write_resource::<Map>();
             let current_depth = worldmap_resource.depth;
             let mut builder = map_builders::random_builder(current_depth+1);
             builder.build_map();
             *worldmap_resource = builder.get_map();
             let player_start = builder.get_starting_position();
-            (builder, worldmap_resource.clone(), player_start)
+            (builder, player_start)
         };
 
         // Spawn bad guys
@@ -210,13 +210,13 @@ impl State {
 
         // Build a new map and place the player
         
-        let (mut builder, mut worldmap, player_start) = {
+        let (mut builder, player_start) = {
             let mut worldmap_resource = self.ecs.write_resource::<Map>();
             let mut builder = map_builders::random_builder(1);
             builder.build_map();
             *worldmap_resource = builder.get_map();
             let player_start = builder.get_starting_position();
-            (builder, worldmap_resource.clone(), player_start)
+            (builder, player_start)
         };
 
         // Spawn bad guys
