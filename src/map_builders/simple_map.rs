@@ -2,6 +2,7 @@ use rltk::RandomNumberGenerator;
 use specs::prelude::*;
 
 use super::common::*;
+use super::super::SHOW_MAPGEN_VISUALIZER;
 use super::super::components::Position;
 use super::super::map::{ Map, TileType };
 use super::MapBuilder;
@@ -12,7 +13,8 @@ pub struct SimpleMapBuilder {
     map: Map,
     starting_position: Position,
     depth: i32,
-    pub rooms: Vec<Rect>,
+    rooms: Vec<Rect>,
+    history: Vec<Map>,
 }
 
 impl SimpleMapBuilder {
@@ -22,6 +24,7 @@ impl SimpleMapBuilder {
             starting_position: Position { x:0, y:0 },
             depth: new_depth,
             rooms: Vec::new(),
+            history: Vec::new(),
         }
     }
 
@@ -58,6 +61,7 @@ impl SimpleMapBuilder {
                 }
 
                 self.rooms.push(new_room);
+                self.take_snapshot();
             }
         }
 
@@ -88,5 +92,19 @@ impl MapBuilder for SimpleMapBuilder {
 
     fn get_starting_position(&mut self) -> Position {
         self.starting_position.clone()
+    }
+
+    fn get_snapshot_history(&self) -> Vec<Map> {
+        self.history.clone()
+    }
+
+    fn take_snapshot(&mut self) {
+        if SHOW_MAPGEN_VISUALIZER {
+            let mut snapshot = self.map.clone();
+            for v in snapshot.revealed_tiles.iter_mut() {
+                *v = true;
+            }
+            self.history.push(snapshot);
+        }
     }
 }
