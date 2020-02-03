@@ -87,17 +87,17 @@ impl BspDungeonBuilder {
     }
 
     fn get_random_subrect(&self, rect : Rect, rng : &mut RandomNumberGenerator) -> Rect {
-        let MIN_WIDTH: i32 = 3;
-        let MIN_HEIGHT: i32 = 3;
-        let MAX_WIDTH: i32 = 10;
-        let MAX_HEIGHT: i32 = 10;
+        let min_width: i32 = 3;
+        let min_height: i32 = 3;
+        let max_width: i32 = 10;
+        let max_height: i32 = 10;
 
         let mut result = rect;
         let rect_width = i32::abs(rect.x1 - rect.x2);
         let rect_height = i32::abs(rect.y1 - rect.y2);
     
-        let w = i32::max(MIN_WIDTH, rng.roll_dice(1, i32::min(rect_width, MAX_WIDTH))-1) + 1;
-        let h = i32::max(MIN_HEIGHT, rng.roll_dice(1, i32::min(rect_height, MAX_HEIGHT))-1) + 1;
+        let w = i32::max(min_width, rng.roll_dice(1, i32::min(rect_width, max_width))-1) + 1;
+        let h = i32::max(min_height, rng.roll_dice(1, i32::min(rect_height, max_height))-1) + 1;
     
         result.x1 += rng.roll_dice(1, 6)-1;
         result.y1 += rng.roll_dice(1, 6)-1;
