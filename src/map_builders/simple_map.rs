@@ -80,22 +80,22 @@ impl MapBuilder for SimpleMapBuilder {
         self.rooms_and_corridors();
     }
 
-    fn spawn_entities(&mut self, ecs: &mut World) {
-        for room in self.rooms.iter().skip(1) {
-            spawner::spawn_room(ecs, room, self.depth);
-        }
-    }
-
     fn get_map(&mut self) -> Map {
         self.map.clone()
+    }
+
+    fn get_snapshot_history(&self) -> Vec<Map> {
+        self.history.clone()
     }
 
     fn get_starting_position(&mut self) -> Position {
         self.starting_position.clone()
     }
 
-    fn get_snapshot_history(&self) -> Vec<Map> {
-        self.history.clone()
+    fn spawn_entities(&mut self, ecs: &mut World) {
+        for room in self.rooms.iter().skip(1) {
+            spawner::spawn_room(ecs, room, self.depth);
+        }
     }
 
     fn take_snapshot(&mut self) {
