@@ -89,24 +89,35 @@ impl CellularAutomataBuilder {
             self.take_snapshot();
         }
 
-        // Find a starting point; start at the middle random walk until finding an open tile
+        // Find a starting point; start at the middle and walk left until finding an open tile
         self.starting_position = Position {
             x: self.map.width / 2,
             y: self.map.height / 2,
         };
-        let mut start_idx = self.map.xy_idx(self.starting_position.x, self.starting_position.y).unwrap();
+        let mut start_idx = self
+            .map
+            .xy_idx(self.starting_position.x, self.starting_position.y)
+            .unwrap();
         while self.map.tiles[start_idx] != TileType::Floor {
             self.starting_position.x -= 1;
-            start_idx = self.map.xy_idx(self.starting_position.x, self.starting_position.y).unwrap();
+            start_idx = self
+                .map
+                .xy_idx(self.starting_position.x, self.starting_position.y)
+                .unwrap();
         }
+        // // Find a starting point; start at the middle and random walk until finding an open tile
         // let mut start_x = self.map.width / 2;
         // let mut start_y = self.map.height / 2;
         // let mut start_idx = self.map.xy_idx(start_x, start_y).unwrap();
         // while self.map.tiles[start_idx] != TileType::Floor {
-        //     start_x += rng.roll_dice(1, 6) - 3;
-        //     start_y += rng.roll_dice(1, 6) - 3;
+        //     start_x += rng.roll_dice(1, 5) - 3;
+        //     start_y += rng.roll_dice(1, 5) - 3;
         //     if let Some(idx) = self.map.xy_idx(start_x, start_y) {
         //         start_idx = idx;
+        //         self.starting_position = Position {
+        //             x: start_x,
+        //             y: start_y
+        //         };
         //     }
         // }
 
