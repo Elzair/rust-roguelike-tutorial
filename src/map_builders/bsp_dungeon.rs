@@ -183,6 +183,7 @@ impl MapBuilder for BspDungeonBuilder {
         let stairs_idx = self.map.xy_idx(stairs.0, stairs.1).unwrap();
         self.map.tiles[stairs_idx] = TileType::DownStairs;
 
+        // Set player starting position
         let start = self.rooms[0].center();
         self.starting_position = Position {
             x: start.0,

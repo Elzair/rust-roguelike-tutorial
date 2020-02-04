@@ -6,6 +6,8 @@ use super::map::Map;
 
 mod bsp_dungeon;
 use bsp_dungeon::BspDungeonBuilder;
+mod bsp_interior;
+use bsp_interior::BspInteriorBuilder;
 mod common;
 mod simple_map;
 use simple_map::SimpleMapBuilder;
@@ -21,8 +23,9 @@ pub trait MapBuilder {
 
 pub fn random_builder(new_depth: i32) -> Box<dyn MapBuilder> {
     let mut rng = RandomNumberGenerator::new();
-    match rng.roll_dice(1, 2) {
+    match rng.roll_dice(1, 3) {
         1 => Box::new(BspDungeonBuilder::new(new_depth)),
+        2 => Box::new(BspInteriorBuilder::new(new_depth)),
         _ => Box::new(SimpleMapBuilder::new(new_depth)),
     } 
 }
