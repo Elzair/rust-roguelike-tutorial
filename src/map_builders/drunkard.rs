@@ -17,6 +17,7 @@ pub enum DrunkSpawnMode {
 
 pub struct DrunkardSettings {
     pub drunken_lifetime: i32,
+    pub floor_percent: f32,
     pub spawn_mode: DrunkSpawnMode,
 }
 
@@ -30,6 +31,7 @@ pub struct DrunkardsWalkBuilder {
 }
 
 impl DrunkardsWalkBuilder {
+    #[allow(dead_code)]
     pub fn new(new_depth: i32, settings: DrunkardSettings) -> DrunkardsWalkBuilder {
         DrunkardsWalkBuilder {
             map: Map::new(new_depth),
@@ -57,7 +59,7 @@ impl DrunkardsWalkBuilder {
         self.map.tiles[start_idx] = TileType::Floor;
 
         let total_tiles = self.map.width * self.map.height;
-        let desired_floor_tiles = (total_tiles / 2) as usize;
+        let desired_floor_tiles = (self.settings.floor_percent * total_tiles as f32) as usize;
         let mut floor_tile_count = self.map.tiles.iter().filter(|a| **a == TileType::Floor).count();
         let mut digger_count = 0;
         let mut active_digger_count= 0;
@@ -128,6 +130,51 @@ impl DrunkardsWalkBuilder {
 
         // Now we build a noise map for use in spawning entities later
         self.noise_areas = common::generate_voronoi_spawn_regions(&self.map, &mut rng);
+    }
+
+    pub fn open_area(new_depth: i32) -> DrunkardsWalkBuilder {
+        DrunkardsWalkBuilder {
+            map: Map::new(new_depth),
+            starting_position: Position { x: 0, y: 0 },
+            depth: new_depth,
+            history: Vec::new(),
+            noise_areas: HashMap::new(),
+            settings: DrunkardSettings {
+                spawn_mode: DrunkSpawnMode::StartingPoint,
+                drunken_lifetime: 400,
+                floor_percent: 0.5,
+            }
+        }
+    }
+
+    pub fn open_halls(new_depth: i32) -> DrunkardsWalkBuilder {
+        DrunkardsWalkBuilder {
+            map: Map::new(new_depth),
+            starting_position: Position { x: 0, y: 0 },
+            depth: new_depth,
+            history: Vec::new(),
+            noise_areas: HashMap::new(),
+            settings: DrunkardSettings {
+                spawn_mode: DrunkSpawnMode::Random,
+                drunken_lifetime: 400,
+                floor_percent: 0.5,
+            }
+        }
+    }
+
+    pub fn winding_passages(new_depth: i32) -> DrunkardsWalkBuilder {
+        DrunkardsWalkBuilder {
+            map: Map::new(new_depth),
+            starting_position: Position { x: 0, y: 0 },
+            depth: new_depth,
+            history: Vec::new(),
+            noise_areas: HashMap::new(),
+            settings: DrunkardSettings {
+                spawn_mode: DrunkSpawnMode::Random,
+                drunken_lifetime: 100,
+                floor_percent: 0.4,
+            }
+        }
     }
 }
 

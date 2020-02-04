@@ -1,4 +1,4 @@
-use rltk::{ CellularDistanceFunction, DijkstraMap, FastNoise, RandomNumberGenerator };
+use rltk::RandomNumberGenerator;
 use specs::prelude::*;
 use std::collections::HashMap;
 
