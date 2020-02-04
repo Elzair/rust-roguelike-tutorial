@@ -58,6 +58,60 @@ impl BspDungeonBuilder {
         ));
     }
 
+    fn build(&mut self) {
+        let mut rng = RandomNumberGenerator::new();
+
+        self.rects.clear();
+        // Start with a single map sized rectangle
+        self.rects
+            .push(Rect::new(2, 2, self.map.width - 5, self.map.height - 5));
+        let first_room = self.rects[0];
+        self.add_subrects(first_room); // Divide the first room
+
+        // Up to 240 times, we get a random rectangle and divide it.
+        // If it is possible to squeeze room in there, we place it and
+        // add it to the rooms list.
+        let mut n_rooms = 0;
+        while n_rooms < 240 {
+            let rect = self.get_random_rect(&mut rng);
+            let candidate = self.get_random_subrect(rect, &mut rng);
+
+            if self.is_possible(candidate) {
+                common::apply_room_to_map(&mut self.map, &candidate);
+                self.rooms.push(candidate);
+                self.add_subrects(rect);
+                self.take_snapshot();
+            }
+
+            n_rooms += 1;
+        }
+        self.rooms.sort_by(|a,b| a.x1.cmp(&b.x1) ); // Sort rooms by left-coordinate
+
+        // Add corridors
+        for i in 0..self.rooms.len()-1 {
+            let room = self.rooms[i];
+            let next_room = self.rooms[i+1];
+            let start_x = room.x1 + (rng.roll_dice(1, i32::abs(room.x1-room.x2))-1);
+            let start_y = room.y1 + (rng.roll_dice(1, i32::abs(room.y1-room.y2))-1);
+            let end_x = next_room.x1 + (rng.roll_dice(1, i32::abs(next_room.x1-next_room.x2))-1);
+            let end_y = next_room.y1 + (rng.roll_dice(1, i32::abs(next_room.y1-next_room.y2))-1);
+            self.draw_corridor(start_x, start_y, end_x, end_y);
+            self.take_snapshot();
+        }
+
+        // Add stairs
+        let stairs = self.rooms[self.rooms.len()-1].center();
+        let stairs_idx = self.map.xy_idx(stairs.0, stairs.1).unwrap();
+        self.map.tiles[stairs_idx] = TileType::DownStairs;
+
+        // Set player starting position
+        let start = self.rooms[0].center();
+        self.starting_position = Position {
+            x: start.0,
+            y: start.1,
+        };
+    }
+
     fn draw_corridor(&mut self, x1: i32, y1: i32, x2: i32, y2: i32) {
         let mut x = x1;
         let mut y = y1;
@@ -138,57 +192,7 @@ impl BspDungeonBuilder {
 
 impl MapBuilder for BspDungeonBuilder {
     fn build_map(&mut self) {
-        let mut rng = RandomNumberGenerator::new();
-
-        self.rects.clear();
-        // Start with a single map sized rectangle
-        self.rects
-            .push(Rect::new(2, 2, self.map.width - 5, self.map.height - 5));
-        let first_room = self.rects[0];
-        self.add_subrects(first_room); // Divide the first room
-
-        // Up to 240 times, we get a random rectangle and divide it.
-        // If it is possible to squeeze room in there, we place it and
-        // add it to the rooms list.
-        let mut n_rooms = 0;
-        while n_rooms < 240 {
-            let rect = self.get_random_rect(&mut rng);
-            let candidate = self.get_random_subrect(rect, &mut rng);
-
-            if self.is_possible(candidate) {
-                common::apply_room_to_map(&mut self.map, &candidate);
-                self.rooms.push(candidate);
-                self.add_subrects(rect);
-                self.take_snapshot();
-            }
-
-            n_rooms += 1;
-        }
-        self.rooms.sort_by(|a,b| a.x1.cmp(&b.x1) ); // Sort rooms by left-coordinate
-
-        // Add corridors
-        for i in 0..self.rooms.len()-1 {
-            let room = self.rooms[i];
-            let next_room = self.rooms[i+1];
-            let start_x = room.x1 + (rng.roll_dice(1, i32::abs(room.x1-room.x2))-1);
-            let start_y = room.y1 + (rng.roll_dice(1, i32::abs(room.y1-room.y2))-1);
-            let end_x = next_room.x1 + (rng.roll_dice(1, i32::abs(next_room.x1-next_room.x2))-1);
-            let end_y = next_room.y1 + (rng.roll_dice(1, i32::abs(next_room.y1-next_room.y2))-1);
-            self.draw_corridor(start_x, start_y, end_x, end_y);
-            self.take_snapshot();
-        }
-
-        // Add stairs
-        let stairs = self.rooms[self.rooms.len()-1].center();
-        let stairs_idx = self.map.xy_idx(stairs.0, stairs.1).unwrap();
-        self.map.tiles[stairs_idx] = TileType::DownStairs;
-
-        // Set player starting position
-        let start = self.rooms[0].center();
-        self.starting_position = Position {
-            x: start.0,
-            y: start.1,
-        };
+        self.build();
     }
 
     fn get_map(&mut self) -> Map {

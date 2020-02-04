@@ -67,29 +67,7 @@ impl BspInteriorBuilder {
         }
     }
 
-    fn draw_corridor(&mut self, x1: i32, y1: i32, x2: i32, y2: i32) {
-        let mut x = x1;
-        let mut y = y1;
-
-        while x != x2 || y != y2 {
-            if x < x2 {
-                x += 1;
-            } else if x > x2 {
-                x -= 1;
-            } else if y < y2 {
-                y += 1;
-            } else if y > y2 {
-                y -= 1;
-            }
-
-            let idx = self.map.xy_idx(x, y).unwrap();
-            self.map.tiles[idx] = TileType::Floor;
-        }
-    }
-}
-
-impl MapBuilder for BspInteriorBuilder {
-    fn build_map(&mut self)  {
+    fn build(&mut self) {
         let mut rng = RandomNumberGenerator::new();
 
         // Start with a single map-sized rectangle. 
@@ -134,6 +112,32 @@ impl MapBuilder for BspInteriorBuilder {
         // Set player starting position
         let start = self.rooms[0].center();
         self.starting_position = Position { x: start.0, y: start.1 };
+    }
+
+    fn draw_corridor(&mut self, x1: i32, y1: i32, x2: i32, y2: i32) {
+        let mut x = x1;
+        let mut y = y1;
+
+        while x != x2 || y != y2 {
+            if x < x2 {
+                x += 1;
+            } else if x > x2 {
+                x -= 1;
+            } else if y < y2 {
+                y += 1;
+            } else if y > y2 {
+                y -= 1;
+            }
+
+            let idx = self.map.xy_idx(x, y).unwrap();
+            self.map.tiles[idx] = TileType::Floor;
+        }
+    }
+}
+
+impl MapBuilder for BspInteriorBuilder {
+    fn build_map(&mut self) {
+        self.build();
     }
 
     fn get_map(&mut self) -> Map {
