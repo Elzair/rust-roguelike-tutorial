@@ -1,7 +1,6 @@
 use rltk::RandomNumberGenerator;
 use specs::prelude::*;
 
-use super::common;
 use super::super::components::Position;
 use super::super::map::{ Map, TileType }; 
 use super::MapBuilder; 
