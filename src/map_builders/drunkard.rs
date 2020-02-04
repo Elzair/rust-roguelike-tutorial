@@ -9,22 +9,34 @@ use super::super::SHOW_MAPGEN_VISUALIZER;
 use super::common;
 use super::MapBuilder;
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum DrunkSpawnMode {
+    Random,
+    StartingPoint,
+}
+
+pub struct DrunkardSettings {
+    pub spawn_mode: DrunkSpawnMode,
+}
+
 pub struct DrunkardsWalkBuilder {
     map: Map,
     starting_position: Position,
     depth: i32,
     history: Vec<Map>,
     noise_areas: HashMap<i32, Vec<usize>>,
+    settings: DrunkardSettings,
 }
 
 impl DrunkardsWalkBuilder {
-    pub fn new(new_depth: i32) -> DrunkardsWalkBuilder {
+    pub fn new(new_depth: i32, settings: DrunkardSettings) -> DrunkardsWalkBuilder {
         DrunkardsWalkBuilder {
             map: Map::new(new_depth),
             starting_position: Position { x: 0, y: 0 },
             depth: new_depth,
             history: Vec::new(),
             noise_areas: HashMap::new(),
+            settings
         }
     }
 
@@ -51,8 +63,18 @@ impl DrunkardsWalkBuilder {
 
         while floor_tile_count < desired_floor_tiles {
             let mut did_something= false;
-            let mut drunk_x = self.starting_position.x;
-            let mut drunk_y = self.starting_position.y;
+            // let mut drunk_x = self.starting_position.x;
+            // let mut drunk_y = self.starting_position.y;
+            let (mut drunk_x, mut drunk_y) = match self.settings.spawn_mode {
+                DrunkSpawnMode::Random => {
+                    if digger_count == 0 {
+                        (self.starting_position.x, self.starting_position.y)
+                    } else {
+                        (rng.roll_dice(1, self.map.width-3)+1, rng.roll_dice(1, self.map.height-3)+1)
+                    }
+                }
+                DrunkSpawnMode::StartingPoint => (self.starting_position.x, self.starting_position.y),
+            };
             let mut drunk_life = 400;
 
             while drunk_life > 0 {
