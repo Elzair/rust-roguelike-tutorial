@@ -16,6 +16,7 @@ pub enum DrunkSpawnMode {
 }
 
 pub struct DrunkardSettings {
+    pub drunken_lifetime: i32,
     pub spawn_mode: DrunkSpawnMode,
 }
 
@@ -75,7 +76,7 @@ impl DrunkardsWalkBuilder {
                 }
                 DrunkSpawnMode::StartingPoint => (self.starting_position.x, self.starting_position.y),
             };
-            let mut drunk_life = 400;
+            let mut drunk_life = self.settings.drunken_lifetime;
 
             while drunk_life > 0 {
                 let drunk_idx = self.map.xy_idx(drunk_x, drunk_y).unwrap();
