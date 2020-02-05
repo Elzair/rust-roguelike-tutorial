@@ -2,45 +2,56 @@ use rltk::{ DistanceAlg, Point, RandomNumberGenerator };
 use specs::prelude::*;
 use std::collections::HashMap;
 
+use super::common;
 use super::super::components::Position;
 use super::super::map::{Map, TileType};
+use super::MapBuilder;
 use super::super::spawner;
 use super::super::SHOW_MAPGEN_VISUALIZER;
-use super::common::{ self, Symmetry };
-use super::MapBuilder;
 
-pub struct VoronoiBuilder {
+#[derive(Clone, Copy, PartialEq)]
+pub enum DistanceAlgorithm {
+    Chebyshev,
+    Manhattan,
+    Pythagoras,
+}
+
+pub struct VoronoiCellSettings {
+    pub distance_algorithm: DistanceAlgorithm,
+    pub n_seeds: usize,
+}
+
+pub struct VoronoiCellBuilder {
     map: Map,
     starting_position: Position,
     depth: i32,
     history: Vec<Map>,
     noise_areas: HashMap<i32, Vec<usize>>,
+    settings: VoronoiCellSettings,
 }
 
-impl VoronoiBuilder {
+impl VoronoiCellBuilder {
     #[allow(dead_code)]
-    pub fn new(new_depth: i32) -> VoronoiBuilder {
-        VoronoiBuilder {
+    pub fn new(new_depth: i32, settings: VoronoiCellSettings) -> Self {
+        VoronoiCellBuilder {
             map: Map::new(new_depth),
             starting_position: Position { x: 0, y: 0 },
             depth: new_depth,
             history: Vec::new(),
             noise_areas: HashMap::new(),
+            settings,
         }
     }
 
     #[allow(clippy::map_entry)]
     fn build(&mut self) {
-        const SNAPSHOT_INTERVAL: usize = 50;
-
         let mut rng = RandomNumberGenerator::new();
 
         // Generate Voronoi Diagram
         // First generate `n_seeds` randomly distributed about the map
-        let n_seeds = 64;
         let mut voronoi_seeds: Vec<(usize, Point)> = Vec::new();
 
-        while voronoi_seeds.len() < n_seeds {
+        while voronoi_seeds.len() < self.settings.n_seeds {
             let vx = rng.roll_dice(1, self.map.width-1);
             let vy = rng.roll_dice(1, self.map.height-1);
             let vidx = self.map.xy_idx(vx, vy).unwrap();
@@ -52,17 +63,24 @@ impl VoronoiBuilder {
         }
 
         // Determine each cell's membership by determining the closest seed to it
-        let mut voronoi_distance = vec![(0, 0.0f32); n_seeds];
+        let mut voronoi_distance = vec![(0, 0.0f32); self.settings.n_seeds];
         let mut voronoi_membership: Vec<i32> = vec![0; self.map.width as usize * self.map.height as usize];
         for (i, vid) in voronoi_membership.iter_mut().enumerate() {
             let x = i as i32 % self.map.width;
             let y = i as i32 / self.map.width;
 
             for (seed, pos) in voronoi_seeds.iter().enumerate() {
-                let distance = DistanceAlg::PythagorasSquared.distance2d(
-                    Point::new(x, y), 
-                    pos.1
-                );
+                let distance = match self.settings.distance_algorithm {
+                    DistanceAlgorithm::Chebyshev => {
+                        DistanceAlg::Chebyshev.distance2d(Point::new(x, y), pos.1)
+                    }
+                    DistanceAlgorithm::Manhattan => {
+                        DistanceAlg::Manhattan.distance2d(Point::new(x, y), pos.1)
+                    }
+                    DistanceAlgorithm::Pythagoras => {
+                        DistanceAlg::Pythagoras.distance2d(Point::new(x, y), pos.1)
+                    }
+                };
                 voronoi_distance[seed] = (seed, distance);
             }
 
@@ -113,9 +131,51 @@ impl VoronoiBuilder {
         // Now we build a noise map for use in spawning entities later
         self.noise_areas = common::generate_voronoi_spawn_regions(&self.map, &mut rng);
     }
+
+    pub fn chebyshev(new_depth: i32) -> Self {
+        VoronoiCellBuilder {
+            map: Map::new(new_depth),
+            starting_position: Position { x: 0, y: 0 },
+            depth: new_depth,
+            history: Vec::new(),
+            noise_areas: HashMap::new(),
+            settings: VoronoiCellSettings {
+                distance_algorithm: DistanceAlgorithm::Chebyshev,
+                n_seeds: 64,
+            },
+        }
+    }
+
+    pub fn manhattan(new_depth: i32) -> Self {
+        VoronoiCellBuilder {
+            map: Map::new(new_depth),
+            starting_position: Position { x: 0, y: 0 },
+            depth: new_depth,
+            history: Vec::new(),
+            noise_areas: HashMap::new(),
+            settings: VoronoiCellSettings {
+                distance_algorithm: DistanceAlgorithm::Manhattan,
+                n_seeds: 64,
+            },
+        }
+    }
+
+    pub fn pythagoras(new_depth: i32) -> Self {
+        VoronoiCellBuilder {
+            map: Map::new(new_depth),
+            starting_position: Position { x: 0, y: 0 },
+            depth: new_depth,
+            history: Vec::new(),
+            noise_areas: HashMap::new(),
+            settings: VoronoiCellSettings {
+                distance_algorithm: DistanceAlgorithm::Pythagoras,
+                n_seeds: 64,
+            },
+        }
+    }
 }
 
-impl MapBuilder for VoronoiBuilder {
+impl MapBuilder for VoronoiCellBuilder {
     fn build_map(&mut self) {
         self.build();
     }
