@@ -6,7 +6,7 @@ use super::super::components::Position;
 use super::super::map::{Map, TileType};
 use super::super::spawner;
 use super::super::SHOW_MAPGEN_VISUALIZER;
-use super::common;
+use super::common::{ self, Symmetry };
 use super::MapBuilder;
 
 #[derive(Clone, Copy, PartialEq)]
@@ -16,19 +16,11 @@ pub enum DLAAlgorithm {
     WalkOutwards,
 }
 
-#[derive(Clone, Copy, PartialEq)]
-pub enum DLASymmetry {
-    Both,
-    Horizontal,
-    None,
-    Vertical,
-}
-
 pub struct DLASettings {
     pub algorithm: DLAAlgorithm,
     pub brush_size: i32,
     pub floor_percent: f32,
-    pub symmetry: DLASymmetry,
+    pub symmetry: Symmetry,
 }
 
 pub struct DLABuilder {
@@ -53,28 +45,6 @@ impl DLABuilder {
         }
     }
 
-    fn apply_paint(&mut self, x: i32, y: i32) {
-        match self.settings.brush_size {
-            1 => {
-                let digger_idx = self.map.xy_idx(x, y).unwrap();
-                self.map.tiles[digger_idx] = TileType::Floor;
-            }
-    
-            _ => {
-                let half_brush_size = self.settings.brush_size/2;
-                for brush_y in y-half_brush_size..y+half_brush_size {
-                    for brush_x in x-half_brush_size..x+half_brush_size {
-                        if brush_x > 1 && brush_x < self.map.width-1 
-                                && brush_y > 1 && brush_y < self.map.height-1 {
-                            let idx = self.map.xy_idx(brush_x, brush_y).unwrap();
-                            self.map.tiles[idx] = TileType::Floor;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     pub fn central_attractor(new_depth : i32) -> DLABuilder {
         DLABuilder{
             map : Map::new(new_depth),
@@ -86,7 +56,7 @@ impl DLABuilder {
                 algorithm: DLAAlgorithm::CentralAttractor,
                 brush_size: 2,
                 floor_percent: 0.25,
-                symmetry: DLASymmetry::None,
+                symmetry: Symmetry::None,
             },
         }
     }
@@ -139,7 +109,7 @@ impl DLABuilder {
                         }
                         digger_idx = self.map.xy_idx(digger_x, digger_y).unwrap();
                     }
-                    self.paint(prev_x, prev_y);
+                    common::paint(&mut self.map, self.settings.symmetry, self.settings.brush_size, prev_x, prev_y);
                 }
                 DLAAlgorithm::WalkOutwards => {
                     let mut digger_x = self.starting_position.x;
@@ -155,7 +125,7 @@ impl DLABuilder {
                         }
                         digger_idx = self.map.xy_idx(digger_x, digger_y).unwrap();
                     }
-                    self.paint(digger_x, digger_y);
+                    common::paint(&mut self.map, self.settings.symmetry, self.settings.brush_size, digger_x, digger_y);
                 }
                 DLAAlgorithm::CentralAttractor => {
                     let mut digger_x = rng.roll_dice(1, self.map.width - 3) + 1;
@@ -178,7 +148,7 @@ impl DLABuilder {
                         path.remove(0);
                         digger_idx = self.map.xy_idx(digger_x, digger_y).unwrap();
                     }
-                    self.paint(prev_x, prev_y);
+                    common::paint(&mut self.map, self.settings.symmetry, self.settings.brush_size, prev_x, prev_y);
                 }
             }
 
@@ -214,48 +184,8 @@ impl DLABuilder {
                 algorithm: DLAAlgorithm::CentralAttractor,
                 brush_size: 2,
                 floor_percent: 0.25,
-                symmetry: DLASymmetry::Horizontal,
+                symmetry: Symmetry::Horizontal,
             },
-        }
-    }
-
-    fn paint(&mut self, x: i32, y: i32) {
-        match self.settings.symmetry {
-            DLASymmetry::None => self.apply_paint(x, y),
-            DLASymmetry::Horizontal => {
-                let center_x = self.map.width / 2;
-                if x == center_x {
-                    self.apply_paint(x, y);                    
-                } else {
-                    let dist_x = i32::abs(center_x - x);
-                    self.apply_paint(center_x + dist_x, y);
-                    self.apply_paint(center_x - dist_x, y);
-                }
-            }
-            DLASymmetry::Vertical => {
-                let center_y = self.map.height / 2;
-                if y == center_y {
-                    self.apply_paint(x, y);
-                } else {
-                    let dist_y = i32::abs(center_y - y);
-                    self.apply_paint(x, center_y + dist_y);
-                    self.apply_paint(x, center_y - dist_y);
-                }
-            }
-            DLASymmetry::Both => {
-                let center_x = self.map.width / 2;
-                let center_y = self.map.height / 2;
-                if x == center_x && y == center_y {
-                    self.apply_paint(x, y);
-                } else {
-                    let dist_x = i32::abs(center_x - x);
-                    self.apply_paint(center_x + dist_x, y);
-                    self.apply_paint(center_x - dist_x, y);
-                    let dist_y = i32::abs(center_y - y);
-                    self.apply_paint(x, center_y + dist_y);
-                    self.apply_paint(x, center_y - dist_y);
-                }
-            }
         }
     }
 
@@ -270,7 +200,7 @@ impl DLABuilder {
                 algorithm: DLAAlgorithm::WalkInwards,
                 brush_size: 1,
                 floor_percent: 0.25,
-                symmetry: DLASymmetry::None,
+                symmetry: Symmetry::None,
             },
         }
     }
@@ -286,7 +216,7 @@ impl DLABuilder {
                 algorithm: DLAAlgorithm::WalkOutwards,
                 brush_size: 2,
                 floor_percent: 0.25,
-                symmetry: DLASymmetry::None,
+                symmetry: Symmetry::None,
             },
         }
     }
