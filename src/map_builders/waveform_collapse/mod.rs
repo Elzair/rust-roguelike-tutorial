@@ -5,8 +5,11 @@ use std::collections::HashMap;
 use super::super::components::Position;
 use super::super::map::{Map, TileType};
 use super::super::{spawner, SHOW_MAPGEN_VISUALIZER};
-use super::{common, MapBuilder};
+use super::{common as mbcommon, MapBuilder};
 
+mod common;
+use common::MapChunk;
+mod constraints;
 mod image_loader;
 
 pub struct WaveformCollapseBuilder {
@@ -33,11 +36,17 @@ impl WaveformCollapseBuilder {
     fn build(&mut self) {
         let mut rng = RandomNumberGenerator::new();
 
+        const CHUNK_SIZE: i32 = 7;
+
         self.map = image_loader::load_rex_map(
             self.depth,
             &rltk::rex::XpFile::from_resource("../resources/wfc-demo1.xp").unwrap(),
         );
         self.take_snapshot();
+
+        let patterns = constraints::build_patterns(&self.map, CHUNK_SIZE, true, true);
+        let constraints = constraints::patterns_to_constraints(patterns, CHUNK_SIZE);
+        self.render_tile_gallery(&constraints, CHUNK_SIZE);
 
         // Set a central starting point
         self.starting_position = Position {
@@ -52,14 +61,43 @@ impl WaveformCollapseBuilder {
 
         // Find all tiles we can reach from the starting point
         let exit_tile =
-            common::remove_unreachable_areas_returning_most_distant(&mut self.map, start_idx);
+            mbcommon::remove_unreachable_areas_returning_most_distant(&mut self.map, start_idx);
 
         // Place the stairs
         self.map.tiles[exit_tile] = TileType::DownStairs;
         self.take_snapshot();
 
         // Now we build a noise map for use in spawning entities later
-        self.noise_areas = common::generate_voronoi_spawn_regions(&self.map, &mut rng);
+        self.noise_areas = mbcommon::generate_voronoi_spawn_regions(&self.map, &mut rng);
+    }
+
+    fn render_tile_gallery(&mut self, constraints: &Vec<MapChunk>, chunk_size: i32) {
+        self.map = Map::new(0);
+        let mut counter = 0;
+        let mut x = 1;
+        let mut y = 1;
+        while counter < constraints.len() {
+            constraints::render_pattern_to_map(&mut self.map, &constraints[counter], chunk_size, x, y);
+    
+            x += chunk_size + 1;
+            if x + chunk_size > self.map.width {
+                // Move to the next row
+                x = 1;
+                y += chunk_size + 1;
+    
+                if y + chunk_size > self.map.height {
+                    // Move to the next page
+                    self.take_snapshot();
+                    self.map = Map::new(0);
+    
+                    x = 1;
+                    y = 1;
+                }
+            }
+    
+            counter += 1;
+        }
+        self.take_snapshot();
     }
 }
 
