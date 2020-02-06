@@ -132,6 +132,7 @@ impl VoronoiCellBuilder {
         self.noise_areas = common::generate_voronoi_spawn_regions(&self.map, &mut rng);
     }
 
+    #[allow(dead_code)]
     pub fn chebyshev(new_depth: i32) -> Self {
         VoronoiCellBuilder {
             map: Map::new(new_depth),

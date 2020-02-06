@@ -1,16 +1,24 @@
-use rltk::RandomNumberGenerator;
+use rltk::{RandomNumberGenerator, rex::XpFile };
 use specs::prelude::*;
 use std::collections::HashMap;
 
+use super::{common as mbcommon, MapBuilder};
 use super::super::components::Position;
 use super::super::map::{Map, TileType};
 use super::super::{spawner, SHOW_MAPGEN_VISUALIZER};
-use super::{common as mbcommon, MapBuilder};
 
 mod common;
 use common::MapChunk;
 mod constraints;
 mod image_loader;
+mod solver;
+use solver::Solver;
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum WaveformMode { 
+    Derived,
+    TestMap,
+}
 
 pub struct WaveformCollapseBuilder {
     map: Map,
@@ -18,45 +26,76 @@ pub struct WaveformCollapseBuilder {
     depth: i32,
     history: Vec<Map>,
     noise_areas: HashMap<i32, Vec<usize>>,
+    mode: WaveformMode,
+    derive_from: Option<Box<dyn MapBuilder>>,
 }
 
 impl WaveformCollapseBuilder {
     #[allow(dead_code)]
-    pub fn new(new_depth: i32) -> Self {
+    pub fn new(new_depth: i32, mode: WaveformMode, derive_from: Option<Box<dyn MapBuilder>>) -> Self {
         WaveformCollapseBuilder {
             map: Map::new(new_depth),
             starting_position: Position { x: 0, y: 0 },
             depth: new_depth,
             history: Vec::new(),
             noise_areas: HashMap::new(),
+            mode,
+            derive_from
         }
     }
 
     #[allow(clippy::map_entry)]
     fn build(&mut self) {
+        if self.mode == WaveformMode::TestMap {
+            self.map = image_loader::load_rex_map(self.depth, &XpFile::from_resource("../resources/wfc-demo1.xp").unwrap());
+            self.take_snapshot();
+            return;
+        }
+
         let mut rng = RandomNumberGenerator::new();
 
-        const CHUNK_SIZE: i32 = 7;
+        const CHUNK_SIZE: i32 = 8;
 
-        self.map = image_loader::load_rex_map(
-            self.depth,
-            &rltk::rex::XpFile::from_resource("../resources/wfc-demo1.xp").unwrap(),
-        );
+        // self.map = image_loader::load_rex_map(
+        //     self.depth,
+        //     &rltk::rex::XpFile::from_resource("../resources/wfc-demo1.xp").unwrap(),
+        // );
+        let prebuilder = &mut self.derive_from.as_mut().unwrap();
+        prebuilder.build_map();
+        self.map = prebuilder.get_map();
+        // Remove any stairs from prebuilt map since we will place them
+        for t in self.map.tiles.iter_mut() {
+            if *t == TileType::DownStairs { *t = TileType::Floor; }
+        }
         self.take_snapshot();
 
         let patterns = constraints::build_patterns(&self.map, CHUNK_SIZE, true, true);
         let constraints = constraints::patterns_to_constraints(patterns, CHUNK_SIZE);
         self.render_tile_gallery(&constraints, CHUNK_SIZE);
 
-        // Set a central starting point
+        self.map = Map::new(self.depth);
+        loop {
+            let mut solver = Solver::new(constraints.clone(), CHUNK_SIZE, &self.map);
+            while !solver.iteration(&mut self.map, &mut rng) {
+                self.take_snapshot();
+            }
+            self.take_snapshot();
+            if solver.possible { break; } // If it has hit an impossible condition, try again
+        }
+
+        // Find a starting point; start at the middle and walk left until we find an open tile
         self.starting_position = Position {
             x: self.map.width / 2,
             y: self.map.height / 2,
         };
-        let start_idx = self
+        let mut start_idx = self
             .map
             .xy_idx(self.starting_position.x, self.starting_position.y)
             .unwrap();
+        while self.map.tiles[start_idx] != TileType::Floor {
+            self.starting_position.x -= 1;
+            start_idx = self.map.xy_idx(self.starting_position.x, self.starting_position.y).unwrap();
+        }
         self.take_snapshot();
 
         // Find all tiles we can reach from the starting point
@@ -69,6 +108,10 @@ impl WaveformCollapseBuilder {
 
         // Now we build a noise map for use in spawning entities later
         self.noise_areas = mbcommon::generate_voronoi_spawn_regions(&self.map, &mut rng);
+    }
+
+    pub fn derived_map(new_depth: i32, builder: Box<dyn MapBuilder>) -> Self {
+        WaveformCollapseBuilder::new(new_depth, WaveformMode::Derived, Some(builder))
     }
 
     fn render_tile_gallery(&mut self, constraints: &Vec<MapChunk>, chunk_size: i32) {
@@ -98,6 +141,10 @@ impl WaveformCollapseBuilder {
             counter += 1;
         }
         self.take_snapshot();
+    }
+
+    pub fn test_map(new_depth: i32) -> Self {
+        WaveformCollapseBuilder::new(new_depth, WaveformMode::TestMap, None)
     }
 }
 

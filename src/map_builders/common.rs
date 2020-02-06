@@ -6,6 +6,7 @@ use super::super::map::{Map, TileType};
 use super::super::rect::Rect;
 
 #[derive(Clone, Copy, PartialEq)]
+#[allow(dead_code)]
 pub enum Symmetry {
     Both,
     Horizontal,
