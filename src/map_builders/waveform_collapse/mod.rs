@@ -1,4 +1,4 @@
-use rltk::{RandomNumberGenerator, rex::XpFile };
+use rltk::RandomNumberGenerator;
 use specs::prelude::*;
 use std::collections::HashMap;
 
@@ -14,55 +14,39 @@ mod image_loader;
 mod solver;
 use solver::Solver;
 
-#[derive(Clone, Copy, PartialEq)]
-pub enum WaveformMode { 
-    Derived,
-    TestMap,
-}
-
 pub struct WaveformCollapseBuilder {
     map: Map,
     starting_position: Position,
     depth: i32,
     history: Vec<Map>,
     noise_areas: HashMap<i32, Vec<usize>>,
-    mode: WaveformMode,
-    derive_from: Option<Box<dyn MapBuilder>>,
+    derive_from: Box<dyn MapBuilder>,
 }
 
 impl WaveformCollapseBuilder {
     #[allow(dead_code)]
-    pub fn new(new_depth: i32, mode: WaveformMode, derive_from: Option<Box<dyn MapBuilder>>) -> Self {
+    pub fn new(new_depth: i32, derive_from: Box<dyn MapBuilder>) -> Self {
         WaveformCollapseBuilder {
             map: Map::new(new_depth),
             starting_position: Position { x: 0, y: 0 },
             depth: new_depth,
             history: Vec::new(),
             noise_areas: HashMap::new(),
-            mode,
             derive_from
         }
     }
 
     #[allow(clippy::map_entry)]
     fn build(&mut self) {
-        if self.mode == WaveformMode::TestMap {
-            self.map = image_loader::load_rex_map(self.depth, &XpFile::from_resource("../resources/wfc-demo1.xp").unwrap());
-            self.take_snapshot();
-            return;
-        }
-
         let mut rng = RandomNumberGenerator::new();
 
         const CHUNK_SIZE: i32 = 8;
 
-        // self.map = image_loader::load_rex_map(
-        //     self.depth,
-        //     &rltk::rex::XpFile::from_resource("../resources/wfc-demo1.xp").unwrap(),
-        // );
-        let prebuilder = &mut self.derive_from.as_mut().unwrap();
+        // Prebuild map to get chunks
+        let prebuilder = &mut self.derive_from.as_mut();
         prebuilder.build_map();
         self.map = prebuilder.get_map();
+
         // Remove any stairs from prebuilt map since we will place them
         for t in self.map.tiles.iter_mut() {
             if *t == TileType::DownStairs { *t = TileType::Floor; }
@@ -111,7 +95,7 @@ impl WaveformCollapseBuilder {
     }
 
     pub fn derived_map(new_depth: i32, builder: Box<dyn MapBuilder>) -> Self {
-        WaveformCollapseBuilder::new(new_depth, WaveformMode::Derived, Some(builder))
+        WaveformCollapseBuilder::new(new_depth, builder)
     }
 
     fn render_tile_gallery(&mut self, constraints: &Vec<MapChunk>, chunk_size: i32) {
@@ -141,10 +125,6 @@ impl WaveformCollapseBuilder {
             counter += 1;
         }
         self.take_snapshot();
-    }
-
-    pub fn test_map(new_depth: i32) -> Self {
-        WaveformCollapseBuilder::new(new_depth, WaveformMode::TestMap, None)
     }
 }
 
