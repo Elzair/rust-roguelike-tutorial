@@ -46,9 +46,15 @@ impl Map {
     }
 
 
+    // pub fn xy_idx(&self, x: i32, y: i32) -> Option<usize> {
+    //     let idx = (y as usize * self.width as usize) + x as usize;
+    //     if idx < self.width as usize * self.height as usize { Some(idx) }
+    //     else { None }
+    // }
     pub fn xy_idx(&self, x: i32, y: i32) -> Option<usize> {
-        let idx = (y as usize * self.width as usize) + x as usize;
-        if idx < self.width as usize * self.height as usize { Some(idx) }
+        if x >= 0 && x < self.width && y >= 0 && y < self.height { 
+            Some((y as usize * self.width as usize) + x as usize) 
+        }
         else { None }
     }
 
