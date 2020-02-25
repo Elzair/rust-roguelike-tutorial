@@ -7,12 +7,13 @@ use super::super::{
 use super::{common, MapBuilder};
 
 mod prefab_level;
+mod prefab_section;
 
 #[derive(Clone, PartialEq)]
-#[allow(dead_code)]
 pub enum PrefabMode {
     Constant { level: prefab_level::PrefabLevel },
     RexLevel { template: &'static str },
+    Sectional { section: prefab_section::PrefabSection }
 }
 
 pub struct PrefabBuilder {
@@ -22,30 +23,66 @@ pub struct PrefabBuilder {
     history: Vec<Map>,
     mode: PrefabMode,
     spawns: Vec<(usize, String)>,
+    previous_builder: Option<Box<dyn MapBuilder>>,
 }
 
 impl PrefabBuilder {
-    pub fn new(new_depth: i32) -> PrefabBuilder {
+    pub fn new(new_depth: i32, previous_builder: Option<Box<dyn MapBuilder>>) -> PrefabBuilder {
         PrefabBuilder {
             map: Map::new(new_depth),
             starting_position: Position { x: 0, y: 0 },
             depth: new_depth,
             history: Vec::new(),
-            mode: PrefabMode::Constant {
-                level: prefab_level::WFC_POPULATED,
+            mode: PrefabMode::Sectional {
+                section: prefab_section::UNDERGROUND_FORT,
             },
-            // mode: PrefabMode::RexLevel {
-            //     template: "../resources/wfc-populated.xp"
-            // },
             spawns: Vec::new(),
+            previous_builder
         }
+    }
+
+    pub fn apply_sectional(&mut self, section: &prefab_section::PrefabSection) {
+        // Build the map
+        let prev_builder = self.previous_builder.as_mut().unwrap();
+        prev_builder.build_map();
+        self.starting_position = prev_builder.get_starting_position();
+        self.map = prev_builder.get_map().clone();
+        self.take_snapshot();
+
+        use prefab_section::*;
+
+        let string_vec = PrefabBuilder::read_ascii_to_vec(section.template);
+
+        // Place the new section
+        let chunk_x = match section.placement.0 {
+            HorizontalPlacement::Left => 0,
+            HorizontalPlacement::Center => (self.map.width / 2) - (section.width as i32 / 2),
+            HorizontalPlacement::Right => (self.map.width-1) - section.width as i32
+        };
+        let chunk_y = match section.placement.1 {
+            VerticalPlacement::Top => 0,
+            VerticalPlacement::Center => (self.map.height / 2) - (section.height as i32 / 2),
+            VerticalPlacement::Bottom => (self.map.height-1) - section.height as i32
+        };
+        println!("{},{}", chunk_x, chunk_y);
+
+        let mut i = 0;
+        for ty in 0..section.height {
+            for tx in 0..section.width {
+                if let Some(idx) = self.map.xy_idx(tx as i32 + chunk_x, ty as i32 + chunk_y) {
+                    self.char_to_map(string_vec[i], idx);
+                }
+                i += 1;
+            }
+        }
+        self.take_snapshot();
     }
 
     fn build(&mut self) {
         match self.mode {
             PrefabMode::Constant { level } => self.load_ascii_map(&level),
             PrefabMode::RexLevel { template } => self.load_rex_map(&template),
-            _ => {}
+            PrefabMode::Sectional { section } => self.apply_sectional(&section),
         }
         self.take_snapshot();
 
@@ -107,23 +144,12 @@ impl PrefabBuilder {
 
     #[allow(dead_code)]
     fn load_ascii_map(&mut self, level: &prefab_level::PrefabLevel) {
-        // Start by converting to a vector, with newlines removed
-        let mut string_vec: Vec<char> = level
-            .template
-            .chars()
-            .filter(|a| *a != '\r' && *a != '\n')
-            .collect();
-        for c in string_vec.iter_mut() {
-            if *c as u8 == 160u8 {
-                *c = ' ';
-            }
-        }
+        let string_vec = PrefabBuilder::read_ascii_to_vec(level.template);
 
         let mut i = 0;
         for ty in 0..level.height {
             for tx in 0..level.width {
-                if tx < self.map.width as usize && ty < self.map.height as usize && i < string_vec.len() {
-                    let idx = self.map.xy_idx(tx as i32, ty as i32).unwrap();
+                if let Some(idx) = self.map.xy_idx(tx as i32, ty as i32) {
                     self.char_to_map(string_vec[i], idx);
                 }
                 i += 1;
@@ -146,6 +172,22 @@ impl PrefabBuilder {
                 }
             }
         }
+    }
+
+    fn read_ascii_to_vec(template: &str ) -> Vec<char> {
+        // Start by converting to a vector, with newlines removed
+        let mut string_vec: Vec<char> = template
+            .chars()
+            .filter(|a| *a != '\r' && *a != '\n')
+            .collect();
+
+        for c in string_vec.iter_mut() {
+            if *c as u8 == 160u8 {
+                *c = ' ';
+            }
+        }
+
+        string_vec
     }
 }
 
