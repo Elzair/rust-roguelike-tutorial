@@ -10,12 +10,13 @@ use super::common;
 use super::MapBuilder;
 
 pub struct BspDungeonBuilder {
-    map: Map,
-    starting_position: Position,
     depth: i32,
-    rooms: Vec<Rect>,
     history: Vec<Map>,
+    map: Map,
     rects: Vec<Rect>,
+    rooms: Vec<Rect>,
+    spawn_list: Vec<(usize, String)>,
+    starting_position: Position,
 }
 
 impl BspDungeonBuilder {
@@ -27,6 +28,7 @@ impl BspDungeonBuilder {
             rooms: Vec::new(),
             history: Vec::new(),
             rects: Vec::new(),
+            spawn_list: Vec::new(),
         }
     }
 
@@ -110,6 +112,11 @@ impl BspDungeonBuilder {
             x: start.0,
             y: start.1,
         };
+
+        // Spawn entities
+        for room in self.rooms.iter().skip(1) {
+            spawner::spawn_room(&self.map, &mut rng, room, self.depth, &mut self.spawn_list);
+        }
     }
 
     fn draw_corridor(&mut self, x1: i32, y1: i32, x2: i32, y2: i32) {
@@ -203,14 +210,16 @@ impl MapBuilder for BspDungeonBuilder {
         self.history.clone()
     }
 
+    fn get_spawn_list(&self) -> &Vec<(usize, String)> {
+        &self.spawn_list
+    }
+
     fn get_starting_position(&mut self) -> Position {
         self.starting_position.clone()
     }
 
     fn spawn_entities(&mut self, ecs: &mut World) {
-        for room in self.rooms.iter().skip(1) {
-            spawner::spawn_room(ecs, room, self.depth);
-        }
+        
     }
 
     fn take_snapshot(&mut self) {

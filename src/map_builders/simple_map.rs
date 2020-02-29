@@ -1,5 +1,4 @@
 use rltk::RandomNumberGenerator;
-use specs::prelude::*;
 
 use super::common::*;
 use super::super::SHOW_MAPGEN_VISUALIZER;
@@ -10,11 +9,12 @@ use super::super::rect::Rect;
 use super::super::spawner;
 
 pub struct SimpleMapBuilder {
-    map: Map,
-    starting_position: Position,
     depth: i32,
-    rooms: Vec<Rect>,
+    map: Map,
     history: Vec<Map>,
+    rooms: Vec<Rect>,
+    spawn_list: Vec<(usize, String)>,
+    starting_position: Position,
 }
 
 impl SimpleMapBuilder {
@@ -25,6 +25,7 @@ impl SimpleMapBuilder {
             depth: new_depth,
             rooms: Vec::new(),
             history: Vec::new(),
+            spawn_list: Vec::new(),
         }
     }
 
@@ -72,6 +73,10 @@ impl SimpleMapBuilder {
 
         let start_pos = self.rooms[0].center();
         self.starting_position = Position { x: start_pos.0, y: start_pos.1 };
+
+        for room in self.rooms.iter().skip(1) {
+            spawner::spawn_room(&self.map, &mut rng, room, self.depth, &mut self.spawn_list);
+        }
     }
 }
 
@@ -88,14 +93,12 @@ impl MapBuilder for SimpleMapBuilder {
         self.history.clone()
     }
 
-    fn get_starting_position(&mut self) -> Position {
-        self.starting_position.clone()
+    fn get_spawn_list(&self) -> &Vec<(usize, String)> {
+        &self.spawn_list
     }
 
-    fn spawn_entities(&mut self, ecs: &mut World) {
-        for room in self.rooms.iter().skip(1) {
-            spawner::spawn_room(ecs, room, self.depth);
-        }
+    fn get_starting_position(&mut self) -> Position {
+        self.starting_position.clone()
     }
 
     fn take_snapshot(&mut self) {

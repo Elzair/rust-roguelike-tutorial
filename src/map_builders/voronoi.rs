@@ -22,12 +22,13 @@ pub struct VoronoiCellSettings {
 }
 
 pub struct VoronoiCellBuilder {
-    map: Map,
-    starting_position: Position,
     depth: i32,
     history: Vec<Map>,
+    map: Map,
     noise_areas: HashMap<i32, Vec<usize>>,
     settings: VoronoiCellSettings,
+    spawn_list: Vec<(usize, String)>,
+    starting_position: Position,
 }
 
 impl VoronoiCellBuilder {
@@ -39,7 +40,8 @@ impl VoronoiCellBuilder {
             depth: new_depth,
             history: Vec::new(),
             noise_areas: HashMap::new(),
-            settings,
+            settings: settings,
+            spawn_list: Vec::new(),
         }
     }
 
@@ -130,6 +132,11 @@ impl VoronoiCellBuilder {
 
         // Now we build a noise map for use in spawning entities later
         self.noise_areas = common::generate_voronoi_spawn_regions(&self.map, &mut rng);
+
+        // Spawn entities
+        for area in self.noise_areas.iter() {
+            spawner::spawn_region(&self.map, &mut rng, area.1, self.depth, &mut self.spawn_list);
+        }
     }
 
     #[allow(dead_code)]
@@ -189,14 +196,12 @@ impl MapBuilder for VoronoiCellBuilder {
         self.history.clone()
     }
 
-    fn get_starting_position(&mut self) -> Position {
-        self.starting_position.clone()
+    fn get_spawn_list(&self) -> &Vec<(usize, String)> {
+        &self.spawn_list
     }
 
-    fn spawn_entities(&mut self, ecs: &mut World) {
-        for area in self.noise_areas.iter() {
-            spawner::spawn_region(ecs, area.1, self.depth);
-        }
+    fn get_starting_position(&mut self) -> Position {
+        self.starting_position.clone()
     }
 
     fn take_snapshot(&mut self) {

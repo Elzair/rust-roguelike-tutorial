@@ -1,5 +1,4 @@
 use rltk::RandomNumberGenerator;
-use specs::prelude::*;
 
 use super::super::components::Position;
 use super::super::map::{ Map, TileType }; 
@@ -11,12 +10,13 @@ use super::super::spawner;
 const MIN_ROOM_SIZE: i32 = 8;
 
 pub struct BspInteriorBuilder {
-    map : Map,
-    starting_position : Position,
     depth: i32,
-    rooms: Vec<Rect>,
     history: Vec<Map>,
-    rects: Vec<Rect>
+    map : Map,
+    rects: Vec<Rect>,
+    rooms: Vec<Rect>,
+    spawn_list: Vec<(usize, String)>,
+    starting_position : Position,
 }
 
 impl BspInteriorBuilder {
@@ -27,7 +27,8 @@ impl BspInteriorBuilder {
             depth : new_depth,
             rooms: Vec::new(),
             history: Vec::new(),
-            rects: Vec::new()
+            rects: Vec::new(),
+            spawn_list: Vec::new(),
         }
     }
     
@@ -112,6 +113,11 @@ impl BspInteriorBuilder {
         // Set player starting position
         let start = self.rooms[0].center();
         self.starting_position = Position { x: start.0, y: start.1 };
+
+        // Spawn entities
+        for room in self.rooms.iter().skip(1) {
+            spawner::spawn_room(&self.map, &mut rng, room, self.depth, &mut self.spawn_list);
+        }
     }
 
     fn draw_corridor(&mut self, x1: i32, y1: i32, x2: i32, y2: i32) {
@@ -148,14 +154,12 @@ impl MapBuilder for BspInteriorBuilder {
         self.history.clone()
     }
 
-    fn get_starting_position(&mut self) -> Position {
-        self.starting_position.clone()
+    fn get_spawn_list(&self) -> &Vec<(usize, String)> {
+        &self.spawn_list
     }
 
-    fn spawn_entities(&mut self, ecs : &mut World) {
-        for room in self.rooms.iter().skip(1) {
-            spawner::spawn_room(ecs, room, self.depth);
-        }
+    fn get_starting_position(&mut self) -> Position {
+        self.starting_position.clone()
     }
 
     fn take_snapshot(&mut self) {

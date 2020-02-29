@@ -3,6 +3,7 @@ use specs::prelude::*;
 
 use super::components::Position;
 use super::map::Map;
+use super::spawner;
 
 mod bsp_dungeon;
 use bsp_dungeon::BspDungeonBuilder;
@@ -30,8 +31,15 @@ pub trait MapBuilder {
     fn build_map(&mut self);
     fn get_map(&mut self) -> Map;
     fn get_snapshot_history(&self) -> Vec<Map>;
+    fn get_spawn_list(&self) -> &Vec<(usize, String)>;
     fn get_starting_position(&mut self) -> Position;
-    fn spawn_entities(&mut self, ecs: &mut World);
+
+    fn spawn_entities(&mut self, ecs: &mut World) {
+        for entity in self.get_spawn_list().iter() {
+            spawner::spawn_entity(ecs, &(&entity.0, &entity.1));
+        }
+    }
+
     fn take_snapshot(&mut self);
 }
 
